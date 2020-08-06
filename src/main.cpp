@@ -695,13 +695,13 @@ void handleGeneralSettings() {
       sprintf(appSettings.AccessPointSSID, "%s", webServer.arg("accesspointssid").c_str());
     }
 
-    if (webServer.hasArg("accesspointpassword") && webServer.hasArg("confirmaccesspointpassword"))
+    if ((webServer.arg("accesspointpassword").length() > 0) && webServer.hasArg("accesspointpassword") && webServer.hasArg("confirmaccesspointpassword"))
       if (webServer.arg("accesspointpassword") == webServer.arg("confirmaccesspointpassword"))
         sprintf(appSettings.AccessPointPassword, "%s", webServer.arg("accesspointpassword").c_str());
     
 
     //  Administrative settings
-    if (webServer.hasArg("deviceadminpassword") && webServer.hasArg("confirmdeviceadminpassword"))
+    if ((webServer.arg("deviceadminpassword").length() > 0) && webServer.hasArg("deviceadminpassword") && webServer.hasArg("confirmdeviceadminpassword"))
       if (webServer.arg("deviceadminpassword") == webServer.arg("confirmdeviceadminpassword"))
         sprintf(appSettings.adminPassword, "%s", webServer.arg("deviceadminpassword").c_str());
     
@@ -1112,7 +1112,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 }
 
 void ConnectToMQTTBroker(){
-  SerialMon.println("Entered ConnectToMQTTBroker().");
   ConnectToGPRS();
 
   if (modem.isGprsConnected()){
@@ -1150,7 +1149,7 @@ void SendLocationDataToServer(){
   if (PSclient.connected()){
     SerialMon.println("Sending data to server...");
 
-    const size_t capacity = JSON_OBJECT_SIZE(20);
+    const size_t capacity = JSON_OBJECT_SIZE(200);
     DynamicJsonDocument doc(capacity);
     char c[11];
 
@@ -1177,7 +1176,6 @@ void SendLocationDataToServer(){
     String myJsonString;
     serializeJson(doc, myJsonString);
 
-    // PSclient.publish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + "/" + appSettings.mqttTopic + "/LOCATION").c_str(), myJsonString.c_str(), false);
     PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
   }
 
@@ -1337,7 +1335,7 @@ void setup() {
 
   //  Select mode of operation
   operationMode = OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE));
-  operationMode = OPERATION_MODES::WIFI_SETUP;
+  //operationMode = OPERATION_MODES::WIFI_SETUP;
   SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n", 
     operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
 
