@@ -1,0 +1,185 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+%pageheader%
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">ActoSenso Node</a>
+                </div>
+                <div class="collapse navbar-collapse" id="myNavbar">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/status.html">Status</a></li>
+                        <li class="active"><a href="/generalsettings.html">General</a></li>
+                        <li><a href="/networksettings.html">Network</a></li>
+                        <li><a href="/tools.html">Tools</a></li>
+                        <li><a href="/login.html?DISCONNECT=YES">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <form class="form-horizontal" method="post">
+            <div class="well">
+                You can set system parameters here.
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">System</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        Fine tune system settings here.
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="friendlyname">Friendly name of node:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="friendlyname" name="friendlyname" placeholder="Enter a friendly name for the node" value="%friendlyname%" maxlength="30">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="heartbeatinterval">Send heartbeat:</label>
+                        <div class="col-sm-10">
+                            <input type="number" class="form-control" id="heartbeatinterval" name="heartbeatinterval" placeholder="Heartbeat frequency" value="%heartbeatinterval%" maxlength="4">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="log2sdcardinterval">Location logging to SD card:</label>
+                        <div class="col-sm-10">
+                            <input type="number" class="form-control" id="log2sdcardinterval" name="log2sdcardinterval" placeholder="Log to SD Card frequency" value="%log2sdcardinterval%" maxlength="4">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="log2mqttinterval">Location logging to Server:</label>
+                        <div class="col-sm-10">
+                            <input type="number" class="form-control" id="log2mqttinterval" name="log2mqttinterval" placeholder="Log to server frequency" value="%log2mqttinterval%" maxlength="4">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="maxfailedgsmattempts">Max. failed GSM connection attempts before resetting modem:</label>
+                        <div class="col-sm-10">
+                            <input type="number" class="form-control" id="maxfailedgsmattempts" name="maxfailedgsmattempts" placeholder="Increase this if GSM signal is weak in your area. The default is 3." value="%maxfailedgsmattempts%" maxlength="4">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="timezoneselector">Time zone:</label>
+                        <div class="col-sm-10">
+                          <select class="form-control" name="timezoneselector" id="timezoneselector">
+                            %timezoneslist%
+                          </select>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">MQTT broker</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        As a test (or backup) server you can use <code>test.mosquitto.org:1883</code>.
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="mqttbroker">MQTT broker:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="mqttbroker" name="mqttbroker" placeholder="Enter a server name or IP address" value="%mqtt-servername%" maxlength="60">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="mqttport">MQTT port:</label>
+                        <div class="col-sm-10">
+                            <input type="number" class="form-control" id="mqttport" name="mqttport" placeholder="Enter port number" value="%mqtt-port%">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="mqtttopic">MQTT topic:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="mqtttopic" name="mqtttopic" placeholder="Enter a topic" value="%mqtt-topic%" maxlength="60">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">Access point</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        When this device acts as an Access Point, it creates a wireless network with the below properties.<br/>
+                        If you do not provide a password, then the existing password remains valid.<br/>
+                        You cannot disable password protection for this device.
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="accesspointssid">SSID:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="accesspointssid" name="accesspointssid" placeholder="Enter a server name for the wireless network" value="%accesspointssid%" maxlength="30" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="accesspointpassword">Password:</label>
+                        <div class="col-sm-10">
+                            <input type="password" class="form-control" id="accesspointpassword" name="accesspointpassword" placeholder="Enter a password for the access point" value="%accesspointpassword%" maxlength="30">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="confirmaccesspointpassword">Confirm password:</label>
+                        <div class="col-sm-10">
+                            <input type="password" class="form-control" id="confirmaccesspointpassword" name="confirmaccesspointpassword" placeholder="Confirm password" value="%confirmaccesspointpassword%" maxlength="30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">Device administration</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        This is the account that has access to this administrative interface of the device.<br/>
+                        If you do not provide a password, then the existing password remains valid.<br/>
+                        You cannot disable password protection for the device administrator.
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="deviceadmin">User name:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="deviceadmin" name="deviceadmin" placeholder="Enter a server name for the system administrator" value="%deviceadmin%" maxlength="30" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="deviceadminpassword">Password:</label>
+                        <div class="col-sm-10">
+                            <input type="password" class="form-control" id="deviceadminpassword" name="deviceadminpassword" placeholder="Enter a password for the administrator" value="%deviceadminpassword%" maxlength="30">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="confirmdeviceadminpassword">Confirm password:</label>
+                        <div class="col-sm-10">
+                            <input type="password" class="form-control" id="confirmdeviceadminpassword" name="confirmdeviceadminpassword" placeholder="Confirm password" value="%confirmdeviceadminpassword%" maxlength="30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="">
+                <button type="submit" class="btn btn-default" onclick="javascript: alert('The system is now restarting. Please wait for a few seconds, then refresh this page.')">Save settings</button>
+            </div>
+
+        </form>
+        <p></p>
+        <div class="well well-sm">
+            (c)2016-2020 Viktor Takacs - <a href="http://diy.viktak.com" target="_blank">diy.viktak.com</a>
+        </div>
+
+    </div>
+</body>
+</html>
