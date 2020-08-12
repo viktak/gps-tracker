@@ -1,7 +1,6 @@
 #define __debugSettings
 #define FORMAT_SPIFFS_IF_FAILED true
 #define ARDUINOJSON_USE_LONG_LONG 1
-#define MQTT_MAX_PACKET_SIZE 2048           //  This needs to be in PubSubClient.h!!!!
 
 #include <includes.h>
 
@@ -22,7 +21,7 @@ Settings appSettings;
 const char apn[]  = GSM_APN_NAME;
 const char gprsUser[] = GPRS_USER;
 const char gprsPass[] = GPRS_PASSWORD;
-u_char unsuccessfulGSMAttempts = 0;
+u_char failedGSMAttempts = 0;
 
 
 // Server details
@@ -51,6 +50,7 @@ unsigned long locationLastLoggedToMQTT = 0;
 //  MQTT
 WiFiClient wclient;
 PubSubClient PSclient(client);
+u_char failedMQTTAttempts = 0;
 
 
 //  I2C
@@ -89,6 +89,34 @@ bool ntpInitialized = false;
 //////////////////////////////////////////////////////////////////
 /////   Misc helper functions
 //////////////////////////////////////////////////////////////////
+
+std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    str.erase(0, str.find_first_not_of(chars));
+    return str;
+}
+ 
+std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    str.erase(str.find_last_not_of(chars) + 1);
+    return str;
+}
+ 
+std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    return ltrim(rtrim(str, chars), chars);
+}
+
+String GetSDCardTypeName(uint8_t cardType){
+  switch (cardType){
+    case CARD_NONE: return "NONE";
+    case CARD_MMC: return "MMC";
+    case CARD_SD: return "SD";
+    case CARD_SDHC: return "SDHC";
+    
+    default: return "UNKNOWN";
+  }
+}
 
 String GetRegistrationStatusName(RegStatus rs){
   switch (rs){
@@ -198,10 +226,10 @@ time_t GetTimeSinceEpoch(){
 
 void PrintSettings(){
   SerialMon.println("==========================App settings==========================");
-  SerialMon.printf("App name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\n", 
+  SerialMon.printf("App name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nMax MQTT attempts\t%i\r\nHearbeat interval\t%u\r\n", 
     appSettings.friendlyName, appSettings.adminPassword, appSettings.ssid, appSettings.password, appSettings.AccessPointSSID, appSettings.AccessPointPassword,
     appSettings.timeZone, appSettings.mqttServer, appSettings.mqttPort, appSettings.mqttTopic, appSettings.logToSDCardInterval,
-    appSettings.logToMQTTServerInterval, appSettings.maxUnsuccessfulGSMAttempts, appSettings.heartbeatInterval);
+    appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.maxfailedMQTTAttempts, appSettings.heartbeatInterval);
   SerialMon.println("====================================================================");
 }
 
@@ -220,7 +248,8 @@ void SaveSettings(){
   prefs.putString("MQTT_TOPIC", appSettings.mqttTopic);
   prefs.putUInt("LOG_TO_SDC_INT", appSettings.logToSDCardInterval);
   prefs.putUInt("LOG_2_MQTT_INT", appSettings.logToMQTTServerInterval);
-  prefs.putUChar("MAX_GSM_ATTEMPT", appSettings.maxUnsuccessfulGSMAttempts);
+  prefs.putUChar("MAX_GSM_ATT", appSettings.maxfailedGSMAttempts);
+  prefs.putUChar("MAX_MQTT_ATT", appSettings.maxfailedMQTTAttempts);
   prefs.putUInt("HEARTBEAT_INTL", appSettings.heartbeatInterval);
   prefs.end();
   delay(10);
@@ -245,7 +274,8 @@ void LoadSettings(bool LoadDefaults = false){
   strcpy(appSettings.AccessPointPassword, (prefs.getString("AP_PASSWORD", DEFAULT_AP_PASSWORD).c_str()));
   appSettings.logToSDCardInterval = prefs.getUInt("LOG_TO_SDC_INT", DEFAULT_LOG_TO_SD_CARD_INTERVAL);
   appSettings.logToMQTTServerInterval = prefs.getUInt("LOG_2_MQTT_INT", DEFAULT_LOG_TO_MQTT_SERVER_INTERVAL);
-  appSettings.maxUnsuccessfulGSMAttempts = prefs.getUChar("MAX_GSM_ATTEMPT", DEFAULT_MAX_UNSUCCESSFUL_GSM_ATTEMPTS);
+  appSettings.maxfailedGSMAttempts = prefs.getUChar("MAX_GSM_ATT", DEFAULT_MAX_FAILED_GSM_ATTEMPTS);
+  appSettings.maxfailedMQTTAttempts = prefs.getUChar("MAX_MQTT_ATT", DEFAULT_MAX_FAILED_MQTT_ATTEMPTS);
   appSettings.heartbeatInterval = prefs.getUInt("HEARTBEAT_INTL", DEFAULT_HEARTBEAT_INTERVAL);
   prefs.end();
 
@@ -268,6 +298,28 @@ void LoadSettings(bool LoadDefaults = false){
   //  Need to save settings just in case something was reset to default
   SaveSettings();
 
+}
+
+void ChangeSettings_JSON(DynamicJsonDocument doc){
+  if ( doc["APP_NAME"] ) strcpy(appSettings.friendlyName, doc["APP_NAME"]);
+  if ( doc["SSID"] ) strcpy(appSettings.ssid, doc["SSID"]);
+  // if ( doc["PASSWORD"] ) strcpy(appSettings.password, doc["PASSWORD"]);
+  // if ( doc["ADMIN_PASSWORD"] ) strcpy(appSettings.adminPassword, doc["ADMIN_PASSWORD"]);
+  if ( doc["TIMEZONE"] ) appSettings.timeZone = doc["TIMEZONE"];
+  if ( doc["MQTT_SERVER"] ) strcpy(appSettings.mqttServer, doc["MQTT_SERVER"]);
+  if ( doc["MQTT_PORT"] ) appSettings.mqttPort = doc["MQTT_PORT"];
+  if ( doc["MQTT_TOPIC"] ) strcpy(appSettings.mqttTopic, doc["MQTT_TOPIC"]);
+  if ( doc["AP_SSID"] ) strcpy(appSettings.AccessPointSSID, doc["AP_SSID"]);
+  // if ( doc["AP_PASSWORD"] ) strcpy(appSettings.AccessPointPassword, doc["AP_PASSWORD"]);
+  if ( doc["LOG_TO_SDC_INT"] ) appSettings.logToSDCardInterval = doc["LOG_TO_SDC_INT"];
+  if ( doc["LOG_2_MQTT_INT"] ) appSettings.logToMQTTServerInterval = doc["LOG_2_MQTT_INT"];
+  if ( doc["MAX_GSM_ATT"] ) appSettings.maxfailedGSMAttempts = doc["MAX_GSM_ATT"];
+  if ( doc["MAX_MQTT_ATT"] ) appSettings.maxfailedMQTTAttempts = doc["MAX_MQTT_ATT"];
+  if ( doc["HEARTBEAT_INTL"] ) appSettings.heartbeatInterval = doc["HEARTBEAT_INTL"];
+
+  SaveSettings();
+
+  ESP.restart();
 }
 
 bool SetSystemTimeFromGPS(){
@@ -513,6 +565,7 @@ void execOTA() {
   }
 }
 
+//  Wifi web handlers
 bool is_authenticated(){
   if (webServer.hasHeader("Cookie")){
     String cookie = webServer.header("Cookie");
@@ -827,7 +880,7 @@ void handleGeneralSettings() {
       appSettings.logToMQTTServerInterval = atoi(webServer.arg("log2mqttinterval").c_str());
 
     if (webServer.hasArg("maxfailedgsmattempts"))
-      appSettings.maxUnsuccessfulGSMAttempts = atoi(webServer.arg("maxfailedgsmattempts").c_str());
+      appSettings.maxfailedGSMAttempts = atoi(webServer.arg("maxfailedgsmattempts").c_str());
 
     if (webServer.hasArg("timezoneselector")){
       appSettings.timeZone = atoi(webServer.arg("timezoneselector").c_str());
@@ -846,6 +899,9 @@ void handleGeneralSettings() {
     if (webServer.hasArg("mqtttopic")){
         sprintf(appSettings.mqttTopic, "%s", webServer.arg("mqtttopic").c_str());
     }
+
+    if (webServer.hasArg("maxfailedmqttattempts"))
+      appSettings.maxfailedMQTTAttempts = atoi(webServer.arg("maxfailedmqttattempts").c_str());
 
 
     //  Access point
@@ -911,7 +967,8 @@ void handleGeneralSettings() {
     if (s.indexOf("%heartbeatinterval%")>-1) s.replace("%heartbeatinterval%", (String)appSettings.heartbeatInterval);
     if (s.indexOf("%log2sdcardinterval%")>-1) s.replace("%log2sdcardinterval%", (String)appSettings.logToSDCardInterval);
     if (s.indexOf("%log2mqttinterval%")>-1) s.replace("%log2mqttinterval%", (String)appSettings.logToMQTTServerInterval);
-    if (s.indexOf("%maxfailedgsmattempts%")>-1) s.replace("%maxfailedgsmattempts%", (String)appSettings.maxUnsuccessfulGSMAttempts);
+    if (s.indexOf("%maxfailedgsmattempts%")>-1) s.replace("%maxfailedgsmattempts%", (String)appSettings.maxfailedGSMAttempts);
+    if (s.indexOf("%maxfailedmqttattempts%")>-1) s.replace("%maxfailedmqttattempts%", (String)appSettings.maxfailedMQTTAttempts);
     if (s.indexOf("%accesspointssid%")>-1) s.replace("%accesspointssid%", (String)appSettings.AccessPointSSID);
     if (s.indexOf("%accesspointpassword%")>-1) s.replace("%accesspointpassword%", "");
     if (s.indexOf("%confirmaccesspointpassword%")>-1) s.replace("%confirmaccesspointpassword%", "");
@@ -1024,15 +1081,8 @@ void InitSDCard(){
     }
     else{
       SerialMon.print("SD Card Type: ");
-      if(cardType == CARD_MMC){
-          SerialMon.println("MMC");
-      } else if(cardType == CARD_SD){
-          SerialMon.println("SDSC");
-      } else if(cardType == CARD_SDHC){
-          SerialMon.println("SDHC");
-      } else {
-          SerialMon.println("UNKNOWN");
-      }                    
+      SerialMon.println(GetSDCardTypeName(cardType));
+
       uint64_t cardSize = SD.cardSize() / (1024 * 1024);
       SerialMon.printf("SD Card Size: %lluMB\r\n", cardSize);
       SerialMon.printf("Total space: %lluMB\r\n", SD.totalBytes() / (1024 * 1024));
@@ -1149,13 +1199,13 @@ void ConnectToGSMNetwork(){
     SerialMon.print("Connecting to GSM network...");
     if (modem.waitForNetwork()){
       SerialMon.println(" success.");
-      unsuccessfulGSMAttempts = 0;
+      failedGSMAttempts = 0;
       ledPanel.write(LED_PANEL_GSM_NETWORK, LOW);
     }
     else{
-      unsuccessfulGSMAttempts++;
-      SerialMon.printf(" failed. #%u\r\n", unsuccessfulGSMAttempts);
-      if (unsuccessfulGSMAttempts > appSettings.maxUnsuccessfulGSMAttempts)
+      failedGSMAttempts++;
+      SerialMon.printf(" failed. #%u\r\n", failedGSMAttempts);
+      if (failedGSMAttempts > appSettings.maxfailedGSMAttempts)
         RestartGSMModem();
     }
   }
@@ -1257,18 +1307,6 @@ void GSMshit(){
 /////   MQTT
 //////////////////////////////////////////////////////////////////
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
-  SerialMon.print("Message arrived [");
-  SerialMon.print(topic);
-  SerialMon.print("]: ");
-  SerialMon.write(payload, len);
-  SerialMon.println();
-
-  // Only proceed if incoming message's topic matches
-  // if (String(topic) == topicLed) {
-  // }
-}
-
 void ConnectToMQTTBroker(){
   ConnectToGPRS();
 
@@ -1286,12 +1324,28 @@ void ConnectToMQTTBroker(){
         boolean status = PSclient.connect("defaultSSID", (MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), 0, true, "offline" );
 
         if (status == false) {
-          SerialMon.println(" failed.");
+          failedMQTTAttempts++;
+          SerialMon.printf(" failed. #%u\r\n", failedMQTTAttempts);
+          if ( failedMQTTAttempts > appSettings.maxfailedMQTTAttempts ){
+            strcpy(appSettings.mqttServer, DEFAULT_MQTT_SERVER);
+            appSettings.mqttPort = DEFAULT_MQTT_PORT;
+            char c[48];
+            uint64_t chipid = ESP.getEfuseMac();
+
+            sprintf(c, "%s-%04X%08X", DEFAULT_MQTT_TOPIC, (uint16_t)(chipid>>32), (uint32_t)chipid);
+            strcpy(appSettings.mqttTopic, c);
+            SaveSettings();
+            ESP.restart();
+          }
+          return;
         }
         SerialMon.println(" success.");
+        failedMQTTAttempts = 0;
 
         PSclient.subscribe((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/cmnd").c_str(), 0);
         PSclient.publish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), "online", true);
+
+        PSclient.setBufferSize(1024*5);
       }
       else{
 #ifdef __debugSettings
@@ -1341,41 +1395,65 @@ void SendLocationDataToServer(){
 
 void SendHeartbeat(){
 
-  const size_t capacity = JSON_OBJECT_SIZE(30) + JSON_OBJECT_SIZE(60);
-  DynamicJsonDocument doc(capacity);
+  const size_t capacity = 2*JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(9) + JSON_OBJECT_SIZE(14);
+  SerialMon.printf("Capacity:\t%u\r\n", capacity);
+  DynamicJsonDocument doc(2*capacity);
 
   char c[48];
   uint64_t chipid = ESP.getEfuseMac();
 
+  JsonObject sdSystem = doc.createNestedObject("System");
   sprintf(c, "ESP-%04X%08X", (uint16_t)(chipid>>32), (uint32_t)chipid);
-  doc["ChipID"] = c;
+  sdSystem["ChipID"] = c;
+
+  bool usingPrivateBroker = strcmp(appSettings.mqttServer, DEFAULT_MQTT_SERVER);
+
 
   if (IsTimeValid()){
-    doc["Time"] = GetFullDateTime("%F %T", size_t(20));
+    sdSystem["Time"] = GetFullDateTime("%F %T", size_t(20));
   }
-  doc["Node"] = ESP.getEfuseMac();
-  doc["Freeheap"] = ESP.getFreeHeap();
-  doc["FriendlyName"] = appSettings.friendlyName;
-  doc["UpTime"] = TimeIntervalToString(millis()/1000);
+  sdSystem["Node"] = ESP.getEfuseMac();
+  sdSystem["Freeheap"] = ESP.getFreeHeap();
+  sdSystem["FriendlyName"] = appSettings.friendlyName;
+  sdSystem["UpTime"] = TimeIntervalToString(millis()/1000);
   
-  // JsonObject wifiDetails = doc.createNestedObject("Wifi");
-  // wifiDetails["SSId"] = String(WiFi.SSID());
-  // wifiDetails["MACAddress"] = String(WiFi.macAddress());
-  // wifiDetails["IPAddress"] = WiFi.localIP().toString();
+  if (SD.begin()){
+    JsonObject sdCardDetails = doc.createNestedObject("SDCard");
+    sdCardDetails["CardType"] = GetSDCardTypeName(SD.cardType());
+    sdCardDetails["TotalSpace"] = SD.totalBytes();
+    sdCardDetails["UsedSpace"] = SD.usedBytes();
+    sdCardDetails["AvailableSpace"] = SD.totalBytes() - SD.usedBytes();
+  }
 
   JsonObject modemDetails = doc.createNestedObject("GPRS");
-  // modemDetails["GsmLocation"] = modem.getGsmLocation();
-  modemDetails["IMEI"] = modem.getIMEI();
+  modemDetails["IMEI"] = usingPrivateBroker?modem.getIMEI():"-";
   String s = modem.getIMSI();
   if (s != NULL)
-    modemDetails["IMSI"] = s;
-  modemDetails["LocalIP"] = modem.getLocalIP();
+    modemDetails["IMSI"] = usingPrivateBroker?s:"-";
+  modemDetails["LocalIP"] = usingPrivateBroker?modem.getLocalIP():"-";
   modemDetails["ModemInfo"] = modem.getModemInfo();
   modemDetails["ModemName"] = modem.getModemName();
-  modemDetails["Operator"] = modem.getOperator();
+  modemDetails["Operator"] = usingPrivateBroker?modem.getOperator():"-";
   modemDetails["RegistrationStatus"] = GetRegistrationStatusName(modem.getRegistrationStatus());
   modemDetails["SignalQuality"] = String(modem.getSignalQuality());
-  modemDetails["SimCCID"] = modem.getSimCCID();
+  modemDetails["SimCCID"] = usingPrivateBroker?modem.getSimCCID():"-";
+
+  JsonObject setings = doc.createNestedObject("Settings");
+  setings["APP_NAME"] = appSettings.friendlyName;
+  setings["SSID"] = appSettings.ssid;
+  setings["PASSWORD"] = usingPrivateBroker?appSettings.password:"-";
+  setings["ADMIN_PASSWORD"] = usingPrivateBroker?appSettings.adminPassword:"-";
+  setings["AP_SSID"] = appSettings.AccessPointSSID;
+  setings["AP_PASSWORD"] = usingPrivateBroker?appSettings.AccessPointPassword:"-";
+  setings["TIMEZONE"] = appSettings.timeZone;
+  setings["MQTT_SERVER"] = appSettings.mqttServer;
+  setings["MQTT_PORT"] = appSettings.mqttPort;
+  setings["MQTT_TOPIC"] = appSettings.mqttTopic;
+  setings["LOG_TO_SDC_INT"] = appSettings.logToSDCardInterval;
+  setings["LOG_2_MQTT_INT"] = appSettings.logToMQTTServerInterval;
+  setings["MAX_GSM_ATT"] = appSettings.maxfailedGSMAttempts;
+  setings["MAX_MQTT_ATT"] = appSettings.maxfailedMQTTAttempts;
+  setings["HEARTBEAT_INTL"] = appSettings.heartbeatInterval;
 
   String myJsonString;
 
@@ -1395,6 +1473,92 @@ void SendHeartbeat(){
     SerialMon.println("Heartbeat sent.");
 #endif
     needsHeartbeat = false;
+  }
+}
+
+void SendFileList(){
+  const size_t capacity1 = 100*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(48) + 1560;
+  DynamicJsonDocument doc1(capacity1);
+
+  doc1["type"] = "FileList";
+
+  if ( SD.begin() ){
+    File root = SD.open("/");
+    if(!root){
+      Serial.println("Failed to open directory");
+      return;
+    }
+    File file = root.openNextFile();
+    uint8_t i = 0;
+    while (file){
+      if (!file.isDirectory()){
+        std::string s = file.name();
+/////////////////////////////////////////////////////////////////
+//  https://github.com/knolleary/pubsubclient/issues/764
+//  Temporary workaround: show only the first 20 files
+/////////////////////////////////////////////////////////////////
+        if (i<20){
+          trim(s, "/");
+          char buf [6];
+          itoa(i, buf, 10);
+          char result[15];
+          strcpy(result,"file");
+          strcat(result,buf);
+
+          JsonObject fileObj = doc1.createNestedObject(&buf);
+          fileObj["name"] = s;
+          fileObj["size"] = file.size();
+        }
+        i++;
+      }
+      file = root.openNextFile();
+    }
+    SD.end();
+
+    String myJsonString;
+    serializeJson(doc1, myJsonString);
+
+#ifdef __debugSettings
+    serializeJsonPretty(doc1, SerialMon);    
+    SerialMon.println();
+#endif
+
+    ConnectToMQTTBroker();
+
+    if (PSclient.connected()){
+      // PSclient.beginPublish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), myJsonString.length(), false);
+      // PSclient.print(myJsonString);
+      // PSclient.endPublish();
+      SerialMon.println(myJsonString);
+      SerialMon.printf("Buffer size:\t%u\r\nJSON size:\t%u\r\nFree heap size:\t%u\r\n", PSclient.getBufferSize(), myJsonString.length(), ESP.getFreeHeap());
+      PSclient.publish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), myJsonString.c_str(), false);
+      SerialMon.println("Reply sent.");
+    }
+
+  }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int len) {
+  const size_t capacity = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(14) + 300;
+
+  DynamicJsonDocument doc(capacity);
+  deserializeJson(doc, payload);
+
+#ifdef __debugSettings
+  SerialMon.print("Message arrived in topic [");
+  SerialMon.print(topic);
+  SerialMon.println("]: ");
+
+  serializeJsonPretty(doc, SerialMon);
+  SerialMon.println();
+#endif
+
+  const char* command = doc["command"];
+  if ( !strcmp(command, "SDCardLogFiles") ){
+    SendFileList();
+  }
+  else if ( !strcmp(command, "SettingSet") ){
+    ChangeSettings_JSON(doc.getMember("params"));
   }
 }
 
@@ -1503,47 +1667,46 @@ void setup() {
   RestartGSMModem();
 
 
-  switch (operationMode)
-  {
-  case OPERATION_MODES::DATA_LOGGING:{
+  switch (operationMode){
+    case OPERATION_MODES::DATA_LOGGING:{
 
-    //  GPS
-    sGPS.begin(GPS_BAUDRATE, SERIAL_8N1, GPS_RECEIVE_GPIO, GPS_SEND_GPIO);
-    //GSMshit();
+      //  GPS
+      sGPS.begin(GPS_BAUDRATE, SERIAL_8N1, GPS_RECEIVE_GPIO, GPS_SEND_GPIO);
+      //GSMshit();
 
-    //  MQTT
-    PSclient.setServer(appSettings.mqttServer, appSettings.mqttPort);
-    PSclient.setCallback(mqttCallback);
+      //  MQTT
+      PSclient.setServer(appSettings.mqttServer, appSettings.mqttPort);
+      PSclient.setCallback(mqttCallback);
 
-    //  Timers/interrupts
-    heartbeatTimerSemaphore = xSemaphoreCreateBinary();
-    heartbeatTimer = timerBegin(0, 80, true);
-    timerAttachInterrupt(heartbeatTimer, &heartbeatTimerCallback, true);
-    timerAlarmWrite(heartbeatTimer, appSettings.heartbeatInterval * 1000000, true);
-    timerAlarmEnable(heartbeatTimer);
+      //  Timers/interrupts
+      heartbeatTimerSemaphore = xSemaphoreCreateBinary();
+      heartbeatTimer = timerBegin(0, 80, true);
+      timerAttachInterrupt(heartbeatTimer, &heartbeatTimerCallback, true);
+      timerAlarmWrite(heartbeatTimer, appSettings.heartbeatInterval * 1000000, true);
+      timerAlarmEnable(heartbeatTimer);
 
-    // Set the initial connection state
+      // Set the initial connection state
 
-    locationLastLoggedToSDCard = locationLastLoggedToMQTT = millis();
+      locationLastLoggedToSDCard = locationLastLoggedToMQTT = millis();
 
-    break;
-  }
-  
-  case OPERATION_MODES::WIFI_SETUP:{
-    //  Internal file system
-
-    if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
-      SerialMon.println("Error: Failed to initialize the filesystem!");
+      break;
     }
+  
+    case OPERATION_MODES::WIFI_SETUP:{
+      //  Internal file system
 
-    connectionState = STATE_CHECK_WIFI_CONNECTION;
+      if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
+        SerialMon.println("Error: Failed to initialize the filesystem!");
+      }
 
-    ConnectToGPRS();
-    PrintModemProperties();
-    break;
-  }
-  default:
-    break;
+      connectionState = STATE_CHECK_WIFI_CONNECTION;
+
+      ConnectToGPRS();
+      PrintModemProperties();
+      break;
+    }
+    default:
+      break;
   }
 }
 

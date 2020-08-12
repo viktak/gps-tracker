@@ -19,7 +19,8 @@ struct Settings{
   u_int logToSDCardInterval;
   u_int logToMQTTServerInterval;
 
-  u_char maxUnsuccessfulGSMAttempts;
+  u_char maxfailedGSMAttempts;
+  u_char maxfailedMQTTAttempts;
 
 
 };

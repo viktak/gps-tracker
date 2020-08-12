@@ -33,12 +33,13 @@
 #define DEFAULT_AP_SSID "TRACKER"
 #define DEFAULT_AP_PASSWORD "12345678"
 #define DEFAULT_TIMEZONE 2
-#define DEFAULT_MQTT_SERVER "test.mosquitto.org"
+ #define DEFAULT_MQTT_SERVER "test.mosquitto.org"
 #define DEFAULT_MQTT_PORT 1883
 #define DEFAULT_MQTT_TOPIC  "tracker"
 #define DEFAULT_LOG_TO_SD_CARD_INTERVAL 5   //  seconds
 #define DEFAULT_LOG_TO_MQTT_SERVER_INTERVAL 60   //  seconds
-#define DEFAULT_MAX_UNSUCCESSFUL_GSM_ATTEMPTS   3
+#define DEFAULT_MAX_FAILED_GSM_ATTEMPTS   3
+#define DEFAULT_MAX_FAILED_MQTT_ATTEMPTS   5
 #define DEFAULT_HEARTBEAT_INTERVAL 300  //  seconds
 
 
@@ -122,15 +123,6 @@
 #define GPS_BAUDRATE 9600
 #define GPS_RECEIVE_GPIO 13
 #define GPS_SEND_GPIO -1
-
-
-
-////////////////////////////////////////////////////////////////////
-/// ArduinoJson
-////////////////////////////////////////////////////////////////////
-
-#define JSON_SETTINGS_SIZE (JSON_OBJECT_SIZE(10) + 200)
-#define JSON_MQTT_COMMAND_SIZE 300
 
 
 
