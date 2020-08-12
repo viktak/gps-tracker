@@ -1554,10 +1554,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 #endif
 
   const char* command = doc["command"];
-  if ( !strcmp(command, "SDCardLogFiles") ){
+  if ( !strcmp(command, "ListSDCardFiles") ){
     SendFileList();
   }
-  else if ( !strcmp(command, "SettingSet") ){
+  else if ( !strcmp(command, "SetSettings") ){
     ChangeSettings_JSON(doc.getMember("params"));
   }
 }
