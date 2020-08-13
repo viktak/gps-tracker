@@ -18,9 +18,6 @@ Settings appSettings;
 
 
 //  GSM modem
-const char apn[]  = GSM_APN_NAME;
-const char gprsUser[] = GPRS_USER;
-const char gprsPass[] = GPRS_PASSWORD;
 u_char failedGSMAttempts = 0;
 
 
@@ -76,12 +73,15 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 hw_timer_t *heartbeatTimer;
 volatile SemaphoreHandle_t heartbeatTimerSemaphore;
+hw_timer_t *wifiModeTimer;
+volatile SemaphoreHandle_t wifiModeTimerSemaphore;
 
 
 //  Misc variables
 OPERATION_MODES operationMode = OPERATION_MODES::DATA_LOGGING;
 enum CONNECTION_STATE connectionState;
 bool ntpInitialized = false;
+bool needsRestart = false;
 
 
 
@@ -226,16 +226,19 @@ time_t GetTimeSinceEpoch(){
 
 void PrintSettings(){
   SerialMon.println("==========================App settings==========================");
-  SerialMon.printf("App name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nMax MQTT attempts\t%i\r\nHearbeat interval\t%u\r\n", 
+  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nMax MQTT attempts\t%i\r\nHearbeat interval\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
+    appSettings.FailedBootAttempts,
     appSettings.friendlyName, appSettings.adminPassword, appSettings.ssid, appSettings.password, appSettings.AccessPointSSID, appSettings.AccessPointPassword,
     appSettings.timeZone, appSettings.mqttServer, appSettings.mqttPort, appSettings.mqttTopic, appSettings.logToSDCardInterval,
-    appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.maxfailedMQTTAttempts, appSettings.heartbeatInterval);
+    appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.maxfailedMQTTAttempts, appSettings.heartbeatInterval,
+    appSettings.gprsAPName, appSettings.gprsUserName, appSettings.gprsPassword, appSettings.simPIN);
   SerialMon.println("====================================================================");
 }
 
 void SaveSettings(){
   prefs.begin("gps-tracker", false);
 
+  prefs.putUChar("FAILED_BOOT_ATT", appSettings.FailedBootAttempts);
   prefs.putString("APP_NAME", appSettings.friendlyName);
   prefs.putString("SSID", appSettings.ssid);
   prefs.putString("PASSWORD", appSettings.password);
@@ -251,6 +254,10 @@ void SaveSettings(){
   prefs.putUChar("MAX_GSM_ATT", appSettings.maxfailedGSMAttempts);
   prefs.putUChar("MAX_MQTT_ATT", appSettings.maxfailedMQTTAttempts);
   prefs.putUInt("HEARTBEAT_INTL", appSettings.heartbeatInterval);
+  prefs.putString("GSM_PIN", appSettings.simPIN);
+  prefs.putString("GPRS_APN_NAME", appSettings.gprsAPName);
+  prefs.putString("GPRS_USERNAME", appSettings.gprsUserName);
+  prefs.putString("GPRS_PASSWORD", appSettings.gprsPassword);
   prefs.end();
   delay(10);
 }
@@ -262,6 +269,7 @@ void LoadSettings(bool LoadDefaults = false){
   if ( LoadDefaults )
     prefs.clear();  //  clear all settings
 
+  appSettings.FailedBootAttempts = prefs.getUChar("FAILED_BOOT_ATT", 0) + 1;
   strcpy(appSettings.friendlyName, (prefs.getString("APP_NAME", DEFAULT_APP_FRIENDLY_NAME).c_str()));
   strcpy(appSettings.ssid, (prefs.getString("SSID", " ").c_str()));
   strcpy(appSettings.password, (prefs.getString("PASSWORD", " ").c_str()));
@@ -277,6 +285,11 @@ void LoadSettings(bool LoadDefaults = false){
   appSettings.maxfailedGSMAttempts = prefs.getUChar("MAX_GSM_ATT", DEFAULT_MAX_FAILED_GSM_ATTEMPTS);
   appSettings.maxfailedMQTTAttempts = prefs.getUChar("MAX_MQTT_ATT", DEFAULT_MAX_FAILED_MQTT_ATTEMPTS);
   appSettings.heartbeatInterval = prefs.getUInt("HEARTBEAT_INTL", DEFAULT_HEARTBEAT_INTERVAL);
+  strcpy(appSettings.simPIN, (prefs.getString("GSM_PIN", DEFAULT_GSM_PIN).c_str()));
+  strcpy(appSettings.gprsAPName, (prefs.getString("GPRS_APN_NAME", DEFAULT_GPRS_APN_NAME).c_str()));
+  strcpy(appSettings.gprsUserName, (prefs.getString("GPRS_USERNAME", DEFAULT_GPRS_USERNAME).c_str()));
+  strcpy(appSettings.gprsPassword, (prefs.getString("GPRS_PASSWORD", DEFAULT_GPRS_PASSWORD).c_str()));
+
   prefs.end();
 
   if (strcmp(appSettings.AccessPointSSID,"") == 0){
@@ -386,18 +399,28 @@ String DateTimeToString(time_t time){
   return myTime;
 }
 
-
+void ResetAllSettingsToDefault(){
+  LoadSettings(true);
+  ESP.restart();
+}
 
 
 //////////////////////////////////////////////////////////////////
 /////   Interrupt handlers
 //////////////////////////////////////////////////////////////////
 
-void IRAM_ATTR heartbeatTimerCallback() {
+void IRAM_ATTR heartbeatTimerCallback(){
   portENTER_CRITICAL_ISR(&timerMux);
   needsHeartbeat = true;
   portEXIT_CRITICAL_ISR(&timerMux);
   xSemaphoreGiveFromISR(heartbeatTimerSemaphore, NULL);
+}
+
+void IRAM_ATTR wifiModeTimerCallback(){
+  portENTER_CRITICAL_ISR(&timerMux);
+  needsRestart = true;
+  portEXIT_CRITICAL_ISR(&timerMux);
+  xSemaphoreGiveFromISR(wifiModeTimerSemaphore, NULL);
 }
 
 
@@ -420,6 +443,7 @@ String bin = "/firmware.bin"; // bin file name with a slash in front.
 String getHeaderValue(String header, String headerName) {
   return header.substring(strlen(headerName.c_str()));
 }
+
 
 // OTA Logic 
 void execOTA() {
@@ -565,11 +589,18 @@ void execOTA() {
   }
 }
 
+
+void ResetWifiModeTimer(){
+  wifiModeTimer = timerBegin(0, 80, true);
+}
+        
+
 //  Wifi web handlers
 bool is_authenticated(){
   if (webServer.hasHeader("Cookie")){
     String cookie = webServer.header("Cookie");
     if (cookie.indexOf("EspAuth=1") != -1) {
+      if ( isAccessPoint ) ResetWifiModeTimer();
       return true;
     }
   }
@@ -753,6 +784,9 @@ void handleStatus() {
     if (s.indexOf("%isnetworkconnected%")>-1) s.replace("%isnetworkconnected%", modem.isNetworkConnected()?"Connected":"Not connected");
     if (s.indexOf("%isgprsconnected%")>-1) s.replace("%isgprsconnected%", modem.isGprsConnected()?"Connected":"Not connected");
     if (s.indexOf("%gsmipaddress%")>-1) s.replace("%gsmipaddress%", modem.getLocalIP().c_str());
+    if (s.indexOf("%simpin%")>-1) s.replace("%simpin%", appSettings.simPIN);
+    if (s.indexOf("%gprsapname%")>-1) s.replace("%gprsapname%", appSettings.gprsAPName);
+    if (s.indexOf("%gprsusername%")>-1) s.replace("%gprsusername%", appSettings.gprsUserName);
 
       htmlString+=s;
     }
@@ -887,6 +921,20 @@ void handleGeneralSettings() {
     }
 
 
+    //  GSM settings
+    if (webServer.hasArg("gprsapname"))
+      strcpy(appSettings.gprsAPName, webServer.arg("gprsapname").c_str());
+
+    if (webServer.hasArg("gprsusername"))
+      strcpy(appSettings.gprsUserName, webServer.arg("gprsusername").c_str());
+
+    if (webServer.hasArg("gprspassword"))
+      strcpy(appSettings.gprsPassword, webServer.arg("gprspassword").c_str());
+
+    if (webServer.hasArg("simcardpin"))
+      strcpy(appSettings.simPIN, webServer.arg("simcardpin").c_str());
+
+
     //  MQTT settings
     if (webServer.hasArg("mqttbroker")){
       sprintf(appSettings.mqttServer, "%s", webServer.arg("mqttbroker").c_str());
@@ -975,6 +1023,10 @@ void handleGeneralSettings() {
     if (s.indexOf("%deviceadminpassword%")>-1) s.replace("%deviceadminpassword%", "");
     if (s.indexOf("%confirmdeviceadminpassword%")>-1) s.replace("%confirmdeviceadminpassword%", "");
     if (s.indexOf("%deviceadmin%")>-1) s.replace("%deviceadmin%", "admin");
+    if (s.indexOf("%simpin%")>-1) s.replace("%simpin%", appSettings.simPIN);
+    if (s.indexOf("%gprsapname%")>-1) s.replace("%gprsapname%", appSettings.gprsAPName);
+    if (s.indexOf("%gprsusername%")>-1) s.replace("%gprsusername%", appSettings.gprsUserName);
+    if (s.indexOf("%gprspassword%")>-1) s.replace("%gprspassword%", appSettings.gprsPassword);
 
     htmlString+=s;
   }
@@ -1163,9 +1215,9 @@ void PrintModemProperties(){
 }
 
 void HardwareResetGSMModem(){
-  //  Datasheet describes a value of 0.3-105 ms, so 10 ms should be OK.
+  //  Datasheet describes a value of 0.3-105 ms, so 50 ms should be OK.
   digitalWrite(MODEM_RESET_GPIO, LOW);
-  delay(10);
+  delay(50);
   digitalWrite(MODEM_RESET_GPIO, HIGH);
 }
 
@@ -1184,8 +1236,8 @@ void RestartGSMModem(){
   SerialMon.println(modemInfo);
 
   // Unlock your SIM card with a PIN if needed
-  if ( GSM_PIN && modem.getSimStatus() != 3 ) {
-    modem.simUnlock(GSM_PIN);
+  if ( appSettings.simPIN && modem.getSimStatus() != 3 ) {
+    modem.simUnlock(appSettings.simPIN);
     if (modem.getSimStatus()==SIM_READY)
       SerialMon.println("SIM card unlocked successfully.");
       else
@@ -1211,9 +1263,6 @@ void ConnectToGSMNetwork(){
   }
   else{
     ledPanel.write(LED_PANEL_GSM_NETWORK, LOW);
-#ifdef __debugSettings
-    SerialMon.println("Modem is already connected to the GSM network, nothing to do.");
-#endif
   }
 }
 
@@ -1224,9 +1273,8 @@ void ConnectToGPRS(){
     if (!modem.isGprsConnected()){
       ledPanel.write(LED_PANEL_GPRS, HIGH);
       // GPRS connection parameters are usually set after network registration
-      SerialMon.print("Connecting to ");
-      SerialMon.printf("%s...", apn);
-      if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
+      SerialMon.printf("Connecting to %s...", appSettings.gprsAPName);
+      if (!modem.gprsConnect(appSettings.gprsAPName, appSettings.gprsUserName, appSettings.gprsPassword)) {
         SerialMon.println(" fail.");
         return;
       }
@@ -1238,11 +1286,6 @@ void ConnectToGPRS(){
       SerialMon.println(modem.getLocalIP());
 
       needsHeartbeat = true;
-    }
-    else{
-#ifdef __debugSettings
-      SerialMon.println("Modem is already connected to the GPRS network, nothing to do.");
-#endif
     }
   }
 }
@@ -1347,11 +1390,6 @@ void ConnectToMQTTBroker(){
 
         PSclient.setBufferSize(1024*5);
       }
-      else{
-#ifdef __debugSettings
-        SerialMon.println("Already connected to the MQTT broker, nothing to do.");
-#endif
-      }
   }
 }
 
@@ -1395,38 +1433,51 @@ void SendLocationDataToServer(){
 
 void SendHeartbeat(){
 
-  const size_t capacity = 2*JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(9) + JSON_OBJECT_SIZE(14);
+  const size_t capacity = 2*JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(15);
   SerialMon.printf("Capacity:\t%u\r\n", capacity);
   DynamicJsonDocument doc(2*capacity);
 
   char c[48];
   uint64_t chipid = ESP.getEfuseMac();
 
-  JsonObject sdSystem = doc.createNestedObject("System");
+  JsonObject sysDetails = doc.createNestedObject("System");
   sprintf(c, "ESP-%04X%08X", (uint16_t)(chipid>>32), (uint32_t)chipid);
-  sdSystem["ChipID"] = c;
+  sysDetails["ChipID"] = c;
 
   bool usingPrivateBroker = strcmp(appSettings.mqttServer, DEFAULT_MQTT_SERVER);
 
 
   if (IsTimeValid()){
-    sdSystem["Time"] = GetFullDateTime("%F %T", size_t(20));
+    sysDetails["Time"] = GetFullDateTime("%F %T", size_t(20));
   }
-  sdSystem["Node"] = ESP.getEfuseMac();
-  sdSystem["Freeheap"] = ESP.getFreeHeap();
-  sdSystem["FriendlyName"] = appSettings.friendlyName;
-  sdSystem["UpTime"] = TimeIntervalToString(millis()/1000);
+  sysDetails["Node"] = ESP.getEfuseMac();
+  sysDetails["Freeheap"] = ESP.getFreeHeap();
+  sysDetails["FriendlyName"] = appSettings.friendlyName;
+  sysDetails["UpTime"] = TimeIntervalToString(millis()/1000);
+  sysDetails["TIMEZONE"] = appSettings.timeZone;
+  sysDetails["MQTT_SERVER"] = appSettings.mqttServer;
+  sysDetails["MQTT_PORT"] = appSettings.mqttPort;
+  sysDetails["MQTT_TOPIC"] = appSettings.mqttTopic;
+  sysDetails["LOG_TO_SDC_INT"] = appSettings.logToSDCardInterval;
+  sysDetails["LOG_2_MQTT_INT"] = appSettings.logToMQTTServerInterval;
+  sysDetails["MAX_GSM_ATT"] = appSettings.maxfailedGSMAttempts;
+  sysDetails["MAX_MQTT_ATT"] = appSettings.maxfailedMQTTAttempts;
+  sysDetails["HEARTBEAT_INTL"] = appSettings.heartbeatInterval;
   
   if (SD.begin()){
-    JsonObject sdCardDetails = doc.createNestedObject("SDCard");
-    sdCardDetails["CardType"] = GetSDCardTypeName(SD.cardType());
-    sdCardDetails["TotalSpace"] = SD.totalBytes();
-    sdCardDetails["UsedSpace"] = SD.usedBytes();
-    sdCardDetails["AvailableSpace"] = SD.totalBytes() - SD.usedBytes();
+    JsonObject sdcDetails = doc.createNestedObject("SDCard");
+    sdcDetails["CardType"] = GetSDCardTypeName(SD.cardType());
+    sdcDetails["TotalSpace"] = SD.totalBytes();
+    sdcDetails["UsedSpace"] = SD.usedBytes();
+    sdcDetails["AvailableSpace"] = SD.totalBytes() - SD.usedBytes();
   }
 
   JsonObject modemDetails = doc.createNestedObject("GPRS");
   modemDetails["IMEI"] = usingPrivateBroker?modem.getIMEI():"-";
+  modemDetails["SIM_PIN"] = usingPrivateBroker?appSettings.simPIN:"-";
+  modemDetails["GPRS_AP_NAME"] = appSettings.gprsAPName;
+  modemDetails["GPRS_USER_NAME"] = usingPrivateBroker?appSettings.gprsUserName:"-";
+  modemDetails["GPRS_PASSWORD"] = usingPrivateBroker?appSettings.gprsPassword:"-";
   String s = modem.getIMSI();
   if (s != NULL)
     modemDetails["IMSI"] = usingPrivateBroker?s:"-";
@@ -1438,22 +1489,13 @@ void SendHeartbeat(){
   modemDetails["SignalQuality"] = String(modem.getSignalQuality());
   modemDetails["SimCCID"] = usingPrivateBroker?modem.getSimCCID():"-";
 
-  JsonObject setings = doc.createNestedObject("Settings");
-  setings["APP_NAME"] = appSettings.friendlyName;
-  setings["SSID"] = appSettings.ssid;
-  setings["PASSWORD"] = usingPrivateBroker?appSettings.password:"-";
-  setings["ADMIN_PASSWORD"] = usingPrivateBroker?appSettings.adminPassword:"-";
-  setings["AP_SSID"] = appSettings.AccessPointSSID;
-  setings["AP_PASSWORD"] = usingPrivateBroker?appSettings.AccessPointPassword:"-";
-  setings["TIMEZONE"] = appSettings.timeZone;
-  setings["MQTT_SERVER"] = appSettings.mqttServer;
-  setings["MQTT_PORT"] = appSettings.mqttPort;
-  setings["MQTT_TOPIC"] = appSettings.mqttTopic;
-  setings["LOG_TO_SDC_INT"] = appSettings.logToSDCardInterval;
-  setings["LOG_2_MQTT_INT"] = appSettings.logToMQTTServerInterval;
-  setings["MAX_GSM_ATT"] = appSettings.maxfailedGSMAttempts;
-  setings["MAX_MQTT_ATT"] = appSettings.maxfailedMQTTAttempts;
-  setings["HEARTBEAT_INTL"] = appSettings.heartbeatInterval;
+  JsonObject wifiDetails = doc.createNestedObject("WiFi");
+  wifiDetails["APP_NAME"] = appSettings.friendlyName;
+  wifiDetails["SSID"] = appSettings.ssid;
+  wifiDetails["PASSWORD"] = usingPrivateBroker?appSettings.password:"-";
+  wifiDetails["ADMIN_PASSWORD"] = usingPrivateBroker?appSettings.adminPassword:"-";
+  wifiDetails["AP_SSID"] = appSettings.AccessPointSSID;
+  wifiDetails["AP_PASSWORD"] = usingPrivateBroker?appSettings.AccessPointPassword:"-";
 
   String myJsonString;
 
@@ -1518,21 +1560,16 @@ void SendFileList(){
     String myJsonString;
     serializeJson(doc1, myJsonString);
 
-#ifdef __debugSettings
-    serializeJsonPretty(doc1, SerialMon);    
-    SerialMon.println();
-#endif
-
     ConnectToMQTTBroker();
 
     if (PSclient.connected()){
       // PSclient.beginPublish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), myJsonString.length(), false);
       // PSclient.print(myJsonString);
       // PSclient.endPublish();
-      SerialMon.println(myJsonString);
+
       SerialMon.printf("Buffer size:\t%u\r\nJSON size:\t%u\r\nFree heap size:\t%u\r\n", PSclient.getBufferSize(), myJsonString.length(), ESP.getFreeHeap());
+
       PSclient.publish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), myJsonString.c_str(), false);
-      SerialMon.println("Reply sent.");
     }
 
   }
@@ -1559,6 +1596,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
   }
   else if ( !strcmp(command, "SetSettings") ){
     ChangeSettings_JSON(doc.getMember("params"));
+  }
+  else if ( !strcmp(command, "ResetAllSettingsToDefault") ){
+    ResetAllSettingsToDefault();
   }
 }
 
@@ -1622,12 +1662,6 @@ void setup() {
   SerialMon.begin(115200);
   delay(1000);
 
-  //  Settings
-  LoadSettings(false);
-#ifdef __debugSettings
-  PrintSettings();
-#endif
-
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 
   SerialMon.println("Hardware ID:      " + (String)HARDWARE_ID);
@@ -1636,6 +1670,12 @@ void setup() {
   SerialMon.println("Software version: " + FirmwareVersionString);
   SerialMon.println();
 
+
+  //  Settings
+  LoadSettings(false);
+#ifdef __debugSettings
+  PrintSettings();
+#endif
 
   //  GPIOs
   pinMode(MODEM_RESET_GPIO, OUTPUT);
@@ -1656,16 +1696,15 @@ void setup() {
 
 
   //  Select mode of operation
-  operationMode = OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE));
-  //operationMode = OPERATION_MODES::WIFI_SETUP;
-  SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n", 
-    operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
+  operationMode = appSettings.FailedBootAttempts > MAX_FAILED_BOOT_ATTEMPTS ? OPERATION_MODES::WIFI_SETUP:OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE));
+  if (operationMode == OPERATION_MODES::WIFI_SETUP) ledPanel.write(LED_PANEL_WIFI_MODE, 0); 
 
+  SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n\n", 
+    operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
 
   // Set GSM module baud rate
   SerialAT.begin(MODEM_BAUDRATE, SERIAL_8N1, MODEM_RECEIVE_GPIO, MODEM_SEND_GPIO);
   RestartGSMModem();
-
 
   switch (operationMode){
     case OPERATION_MODES::DATA_LOGGING:{
@@ -1693,6 +1732,7 @@ void setup() {
     }
   
     case OPERATION_MODES::WIFI_SETUP:{
+
       //  Internal file system
 
       if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
@@ -1708,6 +1748,10 @@ void setup() {
     default:
       break;
   }
+
+  appSettings.FailedBootAttempts = 0;
+  SaveSettings();
+
 }
 
 void loop() {
@@ -1779,8 +1823,18 @@ void loop() {
         SerialMon.print("Access point address:\t");
         SerialMon.println(myIP);
 
+        //  Timers/interrupts
+        wifiModeTimerSemaphore = xSemaphoreCreateBinary();
+        wifiModeTimer = timerBegin(0, 80, true);
+        timerAttachInterrupt(wifiModeTimer, &wifiModeTimerCallback, true);
+        timerAlarmWrite(wifiModeTimer, MAX_WIFI_INACTIVITY * 1000000, true);
+        timerAlarmEnable(wifiModeTimer);
+
+
       }
       webServer.handleClient();
+
+      if (needsRestart) ESP.restart();
     }
     else{
       switch (connectionState) {

@@ -1,4 +1,6 @@
 struct Settings{
+  u_char FailedBootAttempts;
+
   char ssid[32];
   char password[32];
 
@@ -22,6 +24,10 @@ struct Settings{
   u_char maxfailedGSMAttempts;
   u_char maxfailedMQTTAttempts;
 
+  char simPIN[16];
+  char gprsAPName[32];
+  char gprsUserName[32];
+  char gprsPassword[32];
 
 };
 
