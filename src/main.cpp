@@ -84,26 +84,36 @@ bool ntpInitialized = false;
 bool needsRestart = false;
 
 
+//////////////////////////////////////////////////////////////////
+/////   Web server
+//////////////////////////////////////////////////////////////////
+
+// Variables to validate
+// response from S3
+int contentLength = 0;
+bool isValidContentType = false;
+
+// S3 Bucket Config
+String host = "diy.viktak.com"; // Host => bucket-name.s3.region.amazonaws.com
+String bin = "/firmware.bin"; // bin file name with a slash in front.
+
 
 
 //////////////////////////////////////////////////////////////////
 /////   Misc helper functions
 //////////////////////////////////////////////////////////////////
 
-std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
-{
+std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
     str.erase(0, str.find_first_not_of(chars));
     return str;
 }
  
-std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
-{
+std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
     str.erase(str.find_last_not_of(chars) + 1);
     return str;
 }
  
-std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
-{
+std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
     return ltrim(rtrim(str, chars), chars);
 }
 
@@ -423,21 +433,6 @@ void IRAM_ATTR wifiModeTimerCallback(){
   xSemaphoreGiveFromISR(wifiModeTimerSemaphore, NULL);
 }
 
-
-
-
-//////////////////////////////////////////////////////////////////
-/////   Web server
-//////////////////////////////////////////////////////////////////
-
-// Variables to validate
-// response from S3
-int contentLength = 0;
-bool isValidContentType = false;
-
-// S3 Bucket Config
-String host = "diy.viktak.com"; // Host => bucket-name.s3.region.amazonaws.com
-String bin = "/firmware.bin"; // bin file name with a slash in front.
 
 // Utility to extract header value from headers
 String getHeaderValue(String header, String headerName) {
@@ -1473,29 +1468,28 @@ void SendHeartbeat(){
   }
 
   JsonObject modemDetails = doc.createNestedObject("GPRS");
-  modemDetails["IMEI"] = usingPrivateBroker?modem.getIMEI():"-";
-  modemDetails["SIM_PIN"] = usingPrivateBroker?appSettings.simPIN:"-";
+  if (usingPrivateBroker) modemDetails["IMEI"] = modem.getIMEI();
+  if (usingPrivateBroker) modemDetails["SIM_PIN"] = appSettings.simPIN;
   modemDetails["GPRS_AP_NAME"] = appSettings.gprsAPName;
-  modemDetails["GPRS_USER_NAME"] = usingPrivateBroker?appSettings.gprsUserName:"-";
-  modemDetails["GPRS_PASSWORD"] = usingPrivateBroker?appSettings.gprsPassword:"-";
+  if (usingPrivateBroker) modemDetails["GPRS_USER_NAME"] = appSettings.gprsUserName;
+  if (usingPrivateBroker) modemDetails["GPRS_PASSWORD"] = appSettings.gprsPassword;
   String s = modem.getIMSI();
-  if (s != NULL)
-    modemDetails["IMSI"] = usingPrivateBroker?s:"-";
-  modemDetails["LocalIP"] = usingPrivateBroker?modem.getLocalIP():"-";
+  if ((s != NULL) && usingPrivateBroker) modemDetails["IMSI"] = s;
+  if (usingPrivateBroker) modemDetails["LocalIP"] = modem.getLocalIP();
   modemDetails["ModemInfo"] = modem.getModemInfo();
   modemDetails["ModemName"] = modem.getModemName();
-  modemDetails["Operator"] = usingPrivateBroker?modem.getOperator():"-";
+  if (usingPrivateBroker) modemDetails["Operator"] = modem.getOperator();
   modemDetails["RegistrationStatus"] = GetRegistrationStatusName(modem.getRegistrationStatus());
   modemDetails["SignalQuality"] = String(modem.getSignalQuality());
-  modemDetails["SimCCID"] = usingPrivateBroker?modem.getSimCCID():"-";
+  if (usingPrivateBroker) modemDetails["SimCCID"] = modem.getSimCCID();
 
   JsonObject wifiDetails = doc.createNestedObject("WiFi");
   wifiDetails["APP_NAME"] = appSettings.friendlyName;
   wifiDetails["SSID"] = appSettings.ssid;
-  wifiDetails["PASSWORD"] = usingPrivateBroker?appSettings.password:"-";
-  wifiDetails["ADMIN_PASSWORD"] = usingPrivateBroker?appSettings.adminPassword:"-";
+  if (usingPrivateBroker) wifiDetails["PASSWORD"] = appSettings.password;
+  if (usingPrivateBroker) wifiDetails["ADMIN_PASSWORD"] = appSettings.adminPassword;
   wifiDetails["AP_SSID"] = appSettings.AccessPointSSID;
-  wifiDetails["AP_PASSWORD"] = usingPrivateBroker?appSettings.AccessPointPassword:"-";
+  if (usingPrivateBroker) wifiDetails["AP_PASSWORD"] = appSettings.AccessPointPassword;
 
   String myJsonString;
 
