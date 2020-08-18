@@ -22,7 +22,6 @@ struct Settings{
   u_int logToMQTTServerInterval;
 
   u_char maxfailedGSMAttempts;
-  u_char maxfailedMQTTAttempts;
 
   char simPIN[16];
   char gprsAPName[32];

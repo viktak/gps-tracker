@@ -47,7 +47,6 @@ unsigned long locationLastLoggedToMQTT = 0;
 //  MQTT
 WiFiClient wclient;
 PubSubClient PSclient(client);
-u_char failedMQTTAttempts = 0;
 
 
 //  I2C
@@ -236,11 +235,11 @@ time_t GetTimeSinceEpoch(){
 
 void PrintSettings(){
   SerialMon.println("==========================App settings==========================");
-  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nMax MQTT attempts\t%i\r\nHearbeat interval\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
+  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
     appSettings.FailedBootAttempts,
     appSettings.friendlyName, appSettings.adminPassword, appSettings.ssid, appSettings.password, appSettings.AccessPointSSID, appSettings.AccessPointPassword,
     appSettings.timeZone, appSettings.mqttServer, appSettings.mqttPort, appSettings.mqttTopic, appSettings.logToSDCardInterval,
-    appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.maxfailedMQTTAttempts, appSettings.heartbeatInterval,
+    appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.heartbeatInterval,
     appSettings.gprsAPName, appSettings.gprsUserName, appSettings.gprsPassword, appSettings.simPIN);
   SerialMon.println("====================================================================");
 }
@@ -262,7 +261,6 @@ void SaveSettings(){
   prefs.putUInt("LOG_TO_SDC_INT", appSettings.logToSDCardInterval);
   prefs.putUInt("LOG_2_MQTT_INT", appSettings.logToMQTTServerInterval);
   prefs.putUChar("MAX_GSM_ATT", appSettings.maxfailedGSMAttempts);
-  prefs.putUChar("MAX_MQTT_ATT", appSettings.maxfailedMQTTAttempts);
   prefs.putUInt("HEARTBEAT_INTL", appSettings.heartbeatInterval);
   prefs.putString("GSM_PIN", appSettings.simPIN);
   prefs.putString("GPRS_APN_NAME", appSettings.gprsAPName);
@@ -293,7 +291,6 @@ void LoadSettings(bool LoadDefaults = false){
   appSettings.logToSDCardInterval = prefs.getUInt("LOG_TO_SDC_INT", DEFAULT_LOG_TO_SD_CARD_INTERVAL);
   appSettings.logToMQTTServerInterval = prefs.getUInt("LOG_2_MQTT_INT", DEFAULT_LOG_TO_MQTT_SERVER_INTERVAL);
   appSettings.maxfailedGSMAttempts = prefs.getUChar("MAX_GSM_ATT", DEFAULT_MAX_FAILED_GSM_ATTEMPTS);
-  appSettings.maxfailedMQTTAttempts = prefs.getUChar("MAX_MQTT_ATT", DEFAULT_MAX_FAILED_MQTT_ATTEMPTS);
   appSettings.heartbeatInterval = prefs.getUInt("HEARTBEAT_INTL", DEFAULT_HEARTBEAT_INTERVAL);
   strcpy(appSettings.simPIN, (prefs.getString("GSM_PIN", DEFAULT_GSM_PIN).c_str()));
   strcpy(appSettings.gprsAPName, (prefs.getString("GPRS_APN_NAME", DEFAULT_GPRS_APN_NAME).c_str()));
@@ -337,7 +334,6 @@ void ChangeSettings_JSON(DynamicJsonDocument doc){
   if ( doc["LOG_TO_SDC_INT"] ) appSettings.logToSDCardInterval = doc["LOG_TO_SDC_INT"];
   if ( doc["LOG_2_MQTT_INT"] ) appSettings.logToMQTTServerInterval = doc["LOG_2_MQTT_INT"];
   if ( doc["MAX_GSM_ATT"] ) appSettings.maxfailedGSMAttempts = doc["MAX_GSM_ATT"];
-  if ( doc["MAX_MQTT_ATT"] ) appSettings.maxfailedMQTTAttempts = doc["MAX_MQTT_ATT"];
   if ( doc["HEARTBEAT_INTL"] ) appSettings.heartbeatInterval = doc["HEARTBEAT_INTL"];
 
   SaveSettings();
@@ -943,9 +939,6 @@ void handleGeneralSettings() {
         sprintf(appSettings.mqttTopic, "%s", webServer.arg("mqtttopic").c_str());
     }
 
-    if (webServer.hasArg("maxfailedmqttattempts"))
-      appSettings.maxfailedMQTTAttempts = atoi(webServer.arg("maxfailedmqttattempts").c_str());
-
 
     //  Access point
     if (webServer.hasArg("accesspointssid")){
@@ -1011,7 +1004,6 @@ void handleGeneralSettings() {
     if (s.indexOf("%log2sdcardinterval%")>-1) s.replace("%log2sdcardinterval%", (String)appSettings.logToSDCardInterval);
     if (s.indexOf("%log2mqttinterval%")>-1) s.replace("%log2mqttinterval%", (String)appSettings.logToMQTTServerInterval);
     if (s.indexOf("%maxfailedgsmattempts%")>-1) s.replace("%maxfailedgsmattempts%", (String)appSettings.maxfailedGSMAttempts);
-    if (s.indexOf("%maxfailedmqttattempts%")>-1) s.replace("%maxfailedmqttattempts%", (String)appSettings.maxfailedMQTTAttempts);
     if (s.indexOf("%accesspointssid%")>-1) s.replace("%accesspointssid%", (String)appSettings.AccessPointSSID);
     if (s.indexOf("%accesspointpassword%")>-1) s.replace("%accesspointpassword%", "");
     if (s.indexOf("%confirmaccesspointpassword%")>-1) s.replace("%confirmaccesspointpassword%", "");
@@ -1350,41 +1342,24 @@ void ConnectToMQTTBroker(){
 
   if (modem.isGprsConnected()){
     if ( !PSclient.connected() ){
-        SerialMon.print("Connecting to ");
-        SerialMon.print(appSettings.mqttServer);
-        SerialMon.print("... ");
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        boolean status = PSclient.connect("defaultSSID", (MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), 0, true, "offline" );
-
-        if (status == false) {
-          failedMQTTAttempts++;
-          SerialMon.printf(" failed. #%u\r\n", failedMQTTAttempts);
-          if ( failedMQTTAttempts > appSettings.maxfailedMQTTAttempts ){
-            strcpy(appSettings.mqttServer, DEFAULT_MQTT_SERVER);
-            appSettings.mqttPort = DEFAULT_MQTT_PORT;
-            char c[48];
-            uint64_t chipid = ESP.getEfuseMac();
-
-            sprintf(c, "%s-%04X%08X", DEFAULT_MQTT_TOPIC, (uint16_t)(chipid>>32), (uint32_t)chipid);
-            strcpy(appSettings.mqttTopic, c);
-            SaveSettings();
-            ESP.restart();
-          }
-          return;
-        }
+      SerialMon.print("Connecting to ");
+      SerialMon.print(appSettings.mqttServer);
+      SerialMon.print("... ");
+      /////////////////////////////////////////////////////////////////////////
+      /////////////////////////////////////////////////////////////////////////
+      /////////////////////////////////////////////////////////////////////////
+      /////////////////////////////////////////////////////////////////////////
+      /////////////////////////////////////////////////////////////////////////
+      /////////////////////////////////////////////////////////////////////////
+      if ( PSclient.connect("defaultSSID", (MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), 0, true, "offline" ) ){
         SerialMon.println(" success.");
-        failedMQTTAttempts = 0;
 
         PSclient.subscribe((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/cmnd").c_str(), 0);
         PSclient.publish((MQTT_CUSTOMER + String("/") + MQTT_PROJECT + String("/") + appSettings.mqttTopic + "/STATE").c_str(), "online", true);
 
         PSclient.setBufferSize(1024*5);
       }
+    }
   }
 }
 
@@ -1456,7 +1431,6 @@ void SendHeartbeat(){
   sysDetails["LOG_TO_SDC_INT"] = appSettings.logToSDCardInterval;
   sysDetails["LOG_2_MQTT_INT"] = appSettings.logToMQTTServerInterval;
   sysDetails["MAX_GSM_ATT"] = appSettings.maxfailedGSMAttempts;
-  sysDetails["MAX_MQTT_ATT"] = appSettings.maxfailedMQTTAttempts;
   sysDetails["HEARTBEAT_INTL"] = appSettings.heartbeatInterval;
   
   if (SD.begin()){
