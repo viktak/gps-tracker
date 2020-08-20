@@ -10,7 +10,7 @@
 
 #define HARDWARE_ID "ESP32-WROOM-32 dev board"
 #define HARDWARE_VERSION "1.0"
-#define SOFTWARE_ID "GPS tracker"
+#define FIRMWARE_ID "GPS tracker"
 #define FIRMWARE_VERSION "1.0"
 
 #define DST_TIMEZONE_OFFSET 3    // Day Light Saving Time offset

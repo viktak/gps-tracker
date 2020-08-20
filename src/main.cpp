@@ -670,7 +670,7 @@ void handleRoot() {
     if (s.indexOf("%chipid%")>-1) s.replace("%chipid%", (String)(uint32_t)ESP.getEfuseMac());
     if (s.indexOf("%hardwareid%")>-1) s.replace("%hardwareid%", HARDWARE_ID);
     if (s.indexOf("%hardwareversion%")>-1) s.replace("%hardwareversion%", HARDWARE_VERSION);
-    if (s.indexOf("%softwareid%")>-1) s.replace("%softwareid%", SOFTWARE_ID);
+    if (s.indexOf("%softwareid%")>-1) s.replace("%softwareid%", FIRMWARE_ID);
     if (s.indexOf("%firmwareversion%")>-1) s.replace("%firmwareversion%", FirmwareVersionString);
 
     htmlString+=s;
@@ -723,7 +723,7 @@ void handleStatus() {
     if (s.indexOf("%espid%")>-1) s.replace("%espid%", c);
     if (s.indexOf("%hardwareid%")>-1) s.replace("%hardwareid%", HARDWARE_ID);
     if (s.indexOf("%hardwareversion%")>-1) s.replace("%hardwareversion%", HARDWARE_VERSION);
-    if (s.indexOf("%softwareid%")>-1) s.replace("%softwareid%", SOFTWARE_ID);
+    if (s.indexOf("%softwareid%")>-1) s.replace("%softwareid%", FIRMWARE_ID);
     if (s.indexOf("%firmwareversion%")>-1) s.replace("%firmwareversion%", FirmwareVersionString);
     if (s.indexOf("%chipid%")>-1) s.replace("%chipid%", c);
     if (s.indexOf("%uptime%")>-1) s.replace("%uptime%", TimeIntervalToString(millis()/1000));
@@ -1403,7 +1403,7 @@ void SendLocationDataToServer(){
 
 void SendHeartbeat(){
 
-  const size_t capacity = 2*JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(15);
+  const size_t capacity = 2*JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(6) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(19);
   SerialMon.printf("Capacity:\t%u\r\n", capacity);
   DynamicJsonDocument doc(2*capacity);
 
@@ -1422,8 +1422,16 @@ void SendHeartbeat(){
   }
   sysDetails["Node"] = ESP.getEfuseMac();
   sysDetails["Freeheap"] = ESP.getFreeHeap();
-  sysDetails["FriendlyName"] = appSettings.friendlyName;
+
+  sysDetails["HardwareID"] = HARDWARE_ID;
+  sysDetails["HardwareVersion"] = HARDWARE_VERSION;
+  sysDetails["FirmwareID"] = FIRMWARE_ID;
+  sysDetails["FirmwareVersion"] = FIRMWARE_VERSION;
   sysDetails["UpTime"] = TimeIntervalToString(millis()/1000);
+  sysDetails["CPU0_ResetReason"] = GetResetReasonString(rtc_get_reset_reason(0));
+  sysDetails["CPU1_ResetReason"] = GetResetReasonString(rtc_get_reset_reason(1));
+  
+  sysDetails["FriendlyName"] = appSettings.friendlyName;
   sysDetails["TIMEZONE"] = appSettings.timeZone;
   sysDetails["MQTT_SERVER"] = appSettings.mqttServer;
   sysDetails["MQTT_PORT"] = appSettings.mqttPort;
@@ -1634,7 +1642,7 @@ void setup() {
 
   SerialMon.println("Hardware ID:      " + (String)HARDWARE_ID);
   SerialMon.println("Hardware version: " + (String)HARDWARE_VERSION);
-  SerialMon.println("Software ID:      " + (String)SOFTWARE_ID);
+  SerialMon.println("Software ID:      " + (String)FIRMWARE_ID);
   SerialMon.println("Software version: " + FirmwareVersionString);
   SerialMon.println();
 
