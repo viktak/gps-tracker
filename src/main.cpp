@@ -235,11 +235,12 @@ time_t GetTimeSinceEpoch(){
 
 void PrintSettings(){
   SerialMon.println("==========================App settings==========================");
-  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
+  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\nRequired GPS accuracy:\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
     appSettings.FailedBootAttempts,
     appSettings.friendlyName, appSettings.adminPassword, appSettings.ssid, appSettings.password, appSettings.AccessPointSSID, appSettings.AccessPointPassword,
     appSettings.timeZone, appSettings.mqttServer, appSettings.mqttPort, appSettings.mqttTopic, appSettings.logToSDCardInterval,
     appSettings.logToMQTTServerInterval, appSettings.maxfailedGSMAttempts, appSettings.heartbeatInterval,
+    appSettings.requiredGPSAccuracy,
     appSettings.gprsAPName, appSettings.gprsUserName, appSettings.gprsPassword, appSettings.simPIN);
   SerialMon.println("====================================================================");
 }
@@ -266,6 +267,7 @@ void SaveSettings(){
   prefs.putString("GPRS_APN_NAME", appSettings.gprsAPName);
   prefs.putString("GPRS_USERNAME", appSettings.gprsUserName);
   prefs.putString("GPRS_PASSWORD", appSettings.gprsPassword);
+  prefs.putUChar("REQD_GPS_ACC", appSettings.requiredGPSAccuracy);
   prefs.end();
   delay(10);
 }
@@ -296,6 +298,7 @@ void LoadSettings(bool LoadDefaults = false){
   strcpy(appSettings.gprsAPName, (prefs.getString("GPRS_APN_NAME", DEFAULT_GPRS_APN_NAME).c_str()));
   strcpy(appSettings.gprsUserName, (prefs.getString("GPRS_USERNAME", DEFAULT_GPRS_USERNAME).c_str()));
   strcpy(appSettings.gprsPassword, (prefs.getString("GPRS_PASSWORD", DEFAULT_GPRS_PASSWORD).c_str()));
+  appSettings.requiredGPSAccuracy = prefs.getUChar("REQD_GPS_ACC", DEFAULT_REQUIRED_GPS_ACCURACY);
 
   prefs.end();
 
@@ -335,6 +338,7 @@ void ChangeSettings_JSON(DynamicJsonDocument doc){
   if ( doc["LOG_2_MQTT_INT"] ) appSettings.logToMQTTServerInterval = doc["LOG_2_MQTT_INT"];
   if ( doc["MAX_GSM_ATT"] ) appSettings.maxfailedGSMAttempts = doc["MAX_GSM_ATT"];
   if ( doc["HEARTBEAT_INTL"] ) appSettings.heartbeatInterval = doc["HEARTBEAT_INTL"];
+  if ( doc["REQD_GPS_ACC"] ) appSettings.requiredGPSAccuracy = doc["REQD_GPS_ACC"];
 
   SaveSettings();
 
@@ -912,6 +916,11 @@ void handleGeneralSettings() {
     }
 
 
+    //  GPS settings
+    if (webServer.hasArg("minRequiredAccuracy"))
+      appSettings.requiredGPSAccuracy = atoi(webServer.arg("minRequiredAccuracy").c_str());
+
+
     //  GSM settings
     if (webServer.hasArg("gprsapname"))
       strcpy(appSettings.gprsAPName, webServer.arg("gprsapname").c_str());
@@ -1014,6 +1023,7 @@ void handleGeneralSettings() {
     if (s.indexOf("%gprsapname%")>-1) s.replace("%gprsapname%", appSettings.gprsAPName);
     if (s.indexOf("%gprsusername%")>-1) s.replace("%gprsusername%", appSettings.gprsUserName);
     if (s.indexOf("%gprspassword%")>-1) s.replace("%gprspassword%", appSettings.gprsPassword);
+    if (s.indexOf("%minRequiredAccuracy%")>-1) s.replace("%minRequiredAccuracy%", (String)appSettings.requiredGPSAccuracy);
 
     htmlString+=s;
   }

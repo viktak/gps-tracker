@@ -28,6 +28,8 @@ struct Settings{
   char gprsUserName[32];
   char gprsPassword[32];
 
+  u_char requiredGPSAccuracy;
+
 };
 
 

@@ -34,6 +34,8 @@
 #define DEFAULT_GPRS_USERNAME                   ""
 #define DEFAULT_GPRS_PASSWORD                   ""
 
+#define DEFAULT_REQUIRED_GPS_ACCURACY           30
+
 #define DEFAULT_ADMIN_USERNAME                  "admin"
 #define DEFAULT_ADMIN_PASSWORD                  "admin"
 #define DEFAULT_APP_FRIENDLY_NAME               "GPS Tracker/Logger"
