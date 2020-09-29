@@ -1,4 +1,3 @@
-#define __debugSettings
 #define FORMAT_SPIFFS_IF_FAILED true
 #define ARDUINOJSON_USE_LONG_LONG 1
 
@@ -116,6 +115,14 @@ std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
     return ltrim(rtrim(str, chars), chars);
 }
 
+uint32_t  GetChipID(){
+  uint32_t chipId = 0;
+  for(int i=0; i<17; i=i+8) {
+	  chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+	}
+  return chipId;
+}
+
 String GetSDCardTypeName(uint8_t cardType){
   switch (cardType){
     case CARD_NONE: return "NONE";
@@ -215,8 +222,7 @@ char* GetFullDateTime(const char *formattingString, size_t size){
 }
 
 bool IsTimeValid(){
-  SerialMon.println(gps.date.age());
-  if (gps.time.isValid() && (gps.date.age() < 1000))
+  if (gps.time.isValid() && (gps.date.isValid()) && (gps.date.year() > 2019))
     return true;
   return false;
 }
@@ -235,7 +241,7 @@ time_t GetTimeSinceEpoch(){
 
 void PrintSettings(){
   SerialMon.println("==========================App settings==========================");
-  SerialMon.printf("Failed boot attempts\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\nRequired GPS accuracy:\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
+  SerialMon.printf("Boot attempts\t\t%u\r\nApp name\t\t%s\r\nAdmin password\t\t%s\r\nSSID\t\t\t%s\r\nPassword\t\t%s\r\nAP SSID\t\t\t%s\r\nAP Password\t\t%s\r\nTimezone\t\t%i\r\nMQTT Server\t\t%s\r\nMQTT Port\t\t%u\r\nMQTT TOPIC\t\t%s\r\nLog2SDCard interval\t%i\r\nLog2Server interval\t%i\r\nMax GSM attempts\t%i\r\nHearbeat interval\t%u\r\nRequired GPS accuracy:\t%u\r\nGPRS AP name\t\t%s\r\nGPRS user name\t\t%s\r\nGPRS password\t\t%s\r\nSIM card PIN\t\t%s\r\n", 
     appSettings.FailedBootAttempts,
     appSettings.friendlyName, appSettings.adminPassword, appSettings.ssid, appSettings.password, appSettings.AccessPointSSID, appSettings.AccessPointPassword,
     appSettings.timeZone, appSettings.mqttServer, appSettings.mqttPort, appSettings.mqttTopic, appSettings.logToSDCardInterval,
@@ -345,23 +351,17 @@ void ChangeSettings_JSON(DynamicJsonDocument doc){
   ESP.restart();
 }
 
-bool SetSystemTimeFromGPS(){
-  if ( IsTimeValid() ){
+void SetSystemTimeFromGPS(){
+  struct tm tm = {0};
+  tm.tm_year = gps.date.year();
+  tm.tm_mon = gps.date.month();
+  tm.tm_mday = gps.date.day();
+  tm.tm_hour = gps.time.hour();
+  tm.tm_min = gps.time.minute();
+  tm.tm_sec = gps.time.second();
 
-    struct tm tm = {0};
-    tm.tm_year = gps.date.year();
-    tm.tm_mon = gps.date.month();
-    tm.tm_mday = gps.date.day();
-    tm.tm_hour = gps.time.hour();
-    tm.tm_min = gps.time.minute();
-    tm.tm_sec = gps.time.second();
-
-    setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_mday, tm.tm_mon, tm.tm_year);
-    SerialMon.println("System time set from GPS.");
-    return true;
-  }
-  SerialMon.println("System time could not be set from GPS.");
-  return false;
+  setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_mday, tm.tm_mon, tm.tm_year);
+  SerialMon.println("System time set from GPS.");
 }
 
 String DateTimeToString(time_t time){
@@ -1226,7 +1226,6 @@ void RestartGSMModem(){
   SerialMon.println("Restarting modem...");
   HardwareResetGSMModem();
   modem.restart();
-  // modem.init();
 
   String modemInfo = modem.getModemInfo();
   SerialMon.print("Modem Info: ");
@@ -1253,7 +1252,7 @@ void ConnectToGSMNetwork(){
     }
     else{
       failedGSMAttempts++;
-      SerialMon.printf(" failed. #%u\r\n", failedGSMAttempts);
+      SerialMon.printf(" failed for the #%u. time.\r\n", failedGSMAttempts);
       if (failedGSMAttempts > appSettings.maxfailedGSMAttempts)
         RestartGSMModem();
     }
@@ -1589,6 +1588,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 }
 
 
+
 //////////////////////////////////////////////////////////////////
 /////   I2C
 //////////////////////////////////////////////////////////////////
@@ -1650,6 +1650,7 @@ void setup() {
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 
+  SerialMon.printf("\r\n\n\nBooting ESP node %u...\r\n", GetChipID());
   SerialMon.println("Hardware ID:      " + (String)HARDWARE_ID);
   SerialMon.println("Hardware version: " + (String)HARDWARE_VERSION);
   SerialMon.println("Software ID:      " + (String)FIRMWARE_ID);
@@ -1667,11 +1668,12 @@ void setup() {
   pinMode(MODEM_RESET_GPIO, OUTPUT);
   digitalWrite(MODEM_RESET_GPIO, HIGH);
 
-  pinMode(BUTTON_SELECT_MODE, INPUT_PULLUP);
+  pinMode(BUTTON_SELECT_MODE_PIN, INPUT_PULLUP);
 
-  pinMode(2, OUTPUT);
-  digitalWrite(2,LOW);
-  
+  pinMode(CONNECTION_STATUS_LED_GPIO, OUTPUT);
+  digitalWrite(CONNECTION_STATUS_LED_GPIO,HIGH);
+
+
 
   //  SD card
   InitSDCard();
@@ -1682,8 +1684,9 @@ void setup() {
 
 
   //  Select mode of operation
-  operationMode = appSettings.FailedBootAttempts > MAX_FAILED_BOOT_ATTEMPTS ? OPERATION_MODES::WIFI_SETUP:OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE));
-  if (operationMode == OPERATION_MODES::WIFI_SETUP) ledPanel.write(LED_PANEL_WIFI_MODE, 0); 
+  operationMode = appSettings.FailedBootAttempts > MAX_FAILED_BOOT_ATTEMPTS ? OPERATION_MODES::WIFI_SETUP:OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE_PIN));
+
+  if (operationMode == OPERATION_MODES::WIFI_SETUP) ledPanel.write(LED_PANEL_WIFI_MODE, 0); else ledPanel.write(LED_PANEL_WIFI_MODE, 1); 
 
   SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n\n", 
     operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
@@ -1697,7 +1700,6 @@ void setup() {
 
       //  GPS
       sGPS.begin(GPS_BAUDRATE, SERIAL_8N1, GPS_RECEIVE_GPIO, GPS_SEND_GPIO);
-      //GSMshit();
 
       //  MQTT
       PSclient.setServer(appSettings.mqttServer, appSettings.mqttPort);
@@ -1743,15 +1745,25 @@ void setup() {
 void loop() {
   switch (operationMode){
   case OPERATION_MODES::DATA_LOGGING:{
-    while ( sGPS.available() > 0) 
+
+    while ( sGPS.available() > 0)
       gps.encode(sGPS.read());
 
+
+    // SerialMon.printf("%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %3.1f\r\n", 
+    //   gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.speed.kmph());
+
+    // SerialMon.printf("date.isValid: %s\tdate.isUpdated: %s\r\ntime.isValid: %s\ttime.isUpdated: %s\r\nlocation.isValid: %s\tlocation.isUpdated: %s\r\n", gps.date.isValid()?"true":"false", gps.date.isUpdated()?"true":"false", gps.time.isValid()?"true":"false", gps.time.isUpdated()?"true":"false", gps.location.isValid()?"true":"false", gps.location.isUpdated()?"true":"false");
+
+    // SerialMon.println();
+
     //  Update time if necessary
-    if ( needsTime && gps.time.isValid() ){
-      needsTime = !SetSystemTimeFromGPS();
+    if ( needsTime && IsTimeValid() ){
+      SetSystemTimeFromGPS();
+      needsTime=false;
     }
 
-    if ( gps.location.isUpdated() ){
+    if ( gps.location.isValid() ){
 
       if ( millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000 ){
         if ( gps.location.isValid() ){
@@ -1770,14 +1782,14 @@ void loop() {
 
       if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
         if ( gps.location.isValid() ){
-          SendLocationDataToServer();
+          //SendLocationDataToServer();
           locationLastLoggedToMQTT = millis();
         }
       }
     }
 
     //  Heartbeat
-    if ( needsHeartbeat ) SendHeartbeat();
+    //if ( needsHeartbeat ) SendHeartbeat();
 
     PSclient.loop();
 
@@ -1953,4 +1965,5 @@ void loop() {
   default:
     break;
   }
+
 }

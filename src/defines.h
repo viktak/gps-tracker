@@ -5,10 +5,12 @@
 /// General
 ////////////////////////////////////////////////////////////////////
 
+#define __debugSettings
+
 #define MQTT_CUSTOMER "viktak"
 #define MQTT_PROJECT  "spiti"
 
-#define HARDWARE_ID "ESP32-WROOM-32 dev board"
+#define HARDWARE_ID "ESP32-WROOM-32 BB"
 #define HARDWARE_VERSION "1.0"
 #define FIRMWARE_ID "GPS tracker"
 #define FIRMWARE_VERSION "1.0"
@@ -21,7 +23,7 @@
 #define OTA_BLINKING_RATE 3
 #define NTP_REFRESH_INTERVAL 3600
 #define MAX_FAILED_BOOT_ATTEMPTS   5
-#define MAX_WIFI_INACTIVITY     120
+#define MAX_WIFI_INACTIVITY     300
 
 
 
@@ -62,7 +64,7 @@
 /// Buttons
 ////////////////////////////////////////////////////////////////////
 
-#define BUTTON_SELECT_MODE 0
+#define BUTTON_SELECT_MODE_PIN 0
 
 
 
@@ -130,7 +132,7 @@
 ////////////////////////////////////////////////////////////////////
 
 #define GPS_BAUDRATE 9600
-#define GPS_RECEIVE_GPIO 13
+#define GPS_RECEIVE_GPIO 34
 #define GPS_SEND_GPIO -1
 
 
@@ -139,14 +141,14 @@
 /// SD Card
 ////////////////////////////////////////////////////////////////////
 
-
+//#define SD_CARD_DETECT_GPIO 32
 
 
 ////////////////////////////////////////////////////////////////////
 /// LED notifications
 ////////////////////////////////////////////////////////////////////
 
-#define CONNECTION_STATUS_LED_GPIO 2
+#define CONNECTION_STATUS_LED_GPIO  2
 #define LED_PANEL_ADDRESS           0x27
 
 #define LED_PANEL_SD_CARD_ACCESS    7
