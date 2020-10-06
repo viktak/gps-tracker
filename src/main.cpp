@@ -1150,7 +1150,7 @@ void InitSDCard(){
 
 void WriteOrAppendFile(fs::FS &fs, const char * path, const char * message){
     ledPanel.write(LED_PANEL_SD_CARD_ACCESS, LOW);
-    SerialMon.printf("INFO: Writing file: %s\r\n", path);
+    SerialMon.printf("Writing file: %s\r\n", path);
 
     File file;
     if ( fs.exists(path) ){
@@ -1212,9 +1212,9 @@ void PrintModemProperties(){
 }
 
 void HardwareResetGSMModem(){
-  //  Datasheet describes a value of 0.3-105 ms, so 50 ms should be OK.
+  //  Datasheet describes a value of 0.3-105 ms, so 500 ms should be OK.
   digitalWrite(MODEM_RESET_GPIO, LOW);
-  delay(50);
+  delay(500);
   digitalWrite(MODEM_RESET_GPIO, HIGH);
 }
 
@@ -1383,14 +1383,14 @@ void SendLocationDataToServer(){
     char c[11];
 
     doc["_type"] = "location";
-    doc["acc"] = gps.hdop.isValid()?gps.hdop.value():99;
+    doc["acc"] = gps.hdop.value();
     doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
     doc["batt"] = modem.getBattPercent();
     doc["conn"] = "m";
     snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
-    doc["lat"] = c;
+    doc["lat"] = gps.location.lat();
     snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
-    doc["lon"] = c;
+    doc["lon"] = gps.location.lng();
     doc["t"] = "p";
     doc["tid"] = "XX";
     doc["tst"] = GetTimeSinceEpoch();
@@ -1398,7 +1398,7 @@ void SendLocationDataToServer(){
     doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
 
     #ifdef __debugSettings
-    serializeJsonPretty(doc,Serial);
+    serializeJsonPretty(doc,SerialMon);
     SerialMon.println();
     #endif
 
@@ -1504,11 +1504,10 @@ void SendHeartbeat(){
 }
 
 void SendFileList(){
-  const size_t capacity1 = 100*JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(48) + 1560;
+  const size_t capacity1 = 100 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(48) + 1560;
   DynamicJsonDocument doc1(capacity1);
 
   doc1["type"] = "FileList";
-
   if ( SD.begin() ){
     File root = SD.open("/");
     if(!root){
@@ -1524,7 +1523,7 @@ void SendFileList(){
 //  https://github.com/knolleary/pubsubclient/issues/764
 //  Temporary workaround: show only the first 20 files
 /////////////////////////////////////////////////////////////////
-        if (i<20){
+        if (i<10){
           trim(s, "/");
           char buf [6];
           itoa(i, buf, 10);
@@ -1753,9 +1752,8 @@ void loop() {
     // SerialMon.printf("%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %3.1f\r\n", 
     //   gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.speed.kmph());
 
-    // SerialMon.printf("date.isValid: %s\tdate.isUpdated: %s\r\ntime.isValid: %s\ttime.isUpdated: %s\r\nlocation.isValid: %s\tlocation.isUpdated: %s\r\n", gps.date.isValid()?"true":"false", gps.date.isUpdated()?"true":"false", gps.time.isValid()?"true":"false", gps.time.isUpdated()?"true":"false", gps.location.isValid()?"true":"false", gps.location.isUpdated()?"true":"false");
+    // SerialMon.printf("date.isValid: %s\tdate.isUpdated: %s\r\ntime.isValid: %s\ttime.isUpdated: %s\r\nlocation.isValid: %s\tlocation.isUpdated: %s\r\n\r\n", gps.date.isValid()?"true":"false", gps.date.isUpdated()?"true":"false", gps.time.isValid()?"true":"false", gps.time.isUpdated()?"true":"false", gps.location.isValid()?"true":"false", gps.location.isUpdated()?"true":"false");
 
-    // SerialMon.println();
 
     //  Update time if necessary
     if ( needsTime && IsTimeValid() ){
@@ -1766,30 +1764,27 @@ void loop() {
     if ( gps.location.isValid() ){
 
       if ( millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000 ){
-        if ( gps.location.isValid() ){
+        //  Create message to log
+        char log[100];
+        snprintf(log, sizeof(log), "%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %2u, %3.1f\r\n", 
+          gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.hdop.value(), gps.speed.kmph());
 
-          //  Create message to log
-          char log[100];
-          snprintf(log, sizeof(log), "%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %3.1f\r\n", 
-            gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.speed.kmph());
+        SerialMon.print(log);
 
-          SerialMon.print(log);
-
-          LogToSDCard(log);
-          locationLastLoggedToSDCard = millis();
-        }
+        LogToSDCard(log);
+        locationLastLoggedToSDCard = millis();
       }
 
       if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
         if ( gps.location.isValid() ){
-          //SendLocationDataToServer();
+          SendLocationDataToServer();
           locationLastLoggedToMQTT = millis();
         }
       }
     }
 
     //  Heartbeat
-    //if ( needsHeartbeat ) SendHeartbeat();
+    if ( needsHeartbeat ) SendHeartbeat();
 
     PSclient.loop();
 
