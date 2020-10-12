@@ -1,3 +1,4 @@
+#define UI_LANG "en"
 #define FORMAT_SPIFFS_IF_FAILED true
 #define ARDUINOJSON_USE_LONG_LONG 1
 
@@ -661,6 +662,8 @@ void handleRoot() {
   time_t localTime = myTZ.toLocal(now(), &tcr);
 
   f = SPIFFS.open("/index.html", "r");
+
+  SerialMon.println(f.name());
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 

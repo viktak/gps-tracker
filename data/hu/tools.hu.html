@@ -1,0 +1,154 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+%pageheader%
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">ActoSenso Node</a>
+                </div>
+                <div class="collapse navbar-collapse" id="myNavbar">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/status.html">Status</a></li>
+                        <li><a href="/generalsettings.html">General</a></li>
+                        <li><a href="/networksettings.html">Network</a></li>
+                        <li class="active"><a href="/tools.html">Tools</a></li>
+                        <li><a href="/login.html?DISCONNECT=YES">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="well">
+            Administrative tools. Use them only if you know what you're doing.
+        </div>
+
+        <form class="form-horizontal" method="post" action="#" enctype="multipart/form-data" id="uploadfromfile_form">
+            <div class="panel panel-default">
+                <div class="panel-heading">Update firmware</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        Update the firmware in this device from a local file.
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="selectedFile">Select file:</label>
+                        <div class="col-sm-10">
+                            <input type="file" class="form-control-file" name="selectedFile" id="selectedFile"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2"></label>
+                        <div class="col-sm-10">
+                            <input type="submit" class="btn btn-default" value="Update"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2"></label>
+                        <div class="col-sm-10">
+                            <div class="progress">
+                                <div id="prgBar" name="prgBar" class="progress-bar progress-bar-striped active" role="progressbar"
+                                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                                  0%
+                                </div>
+                            </div> 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <form class="form-horizontal" method="post">
+            <div class="panel panel-default">
+                <div class="panel-heading">Reboot</div>
+                <div class="panel-body">
+                    <div class="well well-sm">
+                        Reboot device. Decide wether to keep your settings or not.
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="restart">Keep settings:</label>
+                        <div class="col-sm-10">
+                            <button type="submit" class="btn btn-default" id="restart" name="restart"  onclick="javascript: if (!confirm('Are you sure?')) { return false; }">Restart</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-2" for="reset">Default settings:</label>
+                        <div class="col-sm-10">
+                            <button type="submit" class="btn btn-default" id="reset" name="reset" onclick="javascript: if (!confirm('Are you sure?')) { return false; }">Reset</button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </form>
+        
+        <div class="well well-sm">
+            (c)2016-2020 Viktor Takacs - <a href="http://diy.viktak.com" target="_blank">diy.viktak.com</a>
+        </div>
+
+    </div>
+    <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js'>
+    </script>
+    <script>
+        $(document).ready(function(){
+            $('.progress').hide();
+        }); 
+        $('#uploadfromfile_form').submit(function(e){
+            e.preventDefault();
+            var fileSelect = document.getElementById("selectedFile");
+            if (fileSelect.files && fileSelect.files.length == 1){
+                var form = $('#uploadfromfile_form')[0];
+                var data = new FormData(form);
+                $.ajax({
+                    url: '/update',
+                    type: 'POST',
+                    data: data,
+                    contentType: false,
+                    processData:false,
+                    xhr: function() {
+                        var xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (evt.lengthComputable) {
+                                $(".progress").show();
+                                var per = evt.loaded / evt.total;
+                                var pcnt = Math.round(per*100);
+                                $('#prgBar').prop('aria-valuenow',pcnt);
+                                $('#prgBar').prop('style','width:' + pcnt + '%');
+                                if ( pcnt < 100 ){
+                                    $('#prgBar').html(pcnt + '%');
+                                }
+                                else{
+                                    var myCounter = 60;
+                                    var x = setInterval(function() {
+                                        $('#prgBar').html('Firmware uploaded, please wait ' + myCounter + ' seconds...');
+                                        if (myCounter > 0) {
+                                            myCounter--;
+                                        }
+                                        else{
+                                            window.location.replace('/');
+                                        }
+                                    }, 1000);
+                                }
+                            }
+                        }, false);
+                        return xhr;
+                        },
+                    success:function(d, s) {
+                    },
+                    error: function (a, b, c) {
+                    }
+                });
+            }
+            else{
+                window.alert("Select a valid firmware first!");
+            }
+        });
+    </script> 
+</body>
+</html>
