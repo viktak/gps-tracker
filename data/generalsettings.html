@@ -47,14 +47,14 @@
                     <div class="form-group">
                         <label class="control-label col-sm-2" for="heartbeatinterval">Send heartbeat:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="heartbeatinterval" name="heartbeatinterval" placeholder="Heartbeat frequency" value="%heartbeatinterval%" maxlength="4">
+                            <input type="number" class="form-control" id="heartbeatinterval" name="heartbeatinterval" placeholder="Heartbeat frequency" value="%heartbeatinterval%" maxlength="4" min="30" max="900">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="control-label col-sm-2" for="maxfailedgsmattempts">Max. failed GSM connection attempts before resetting modem:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="maxfailedgsmattempts" name="maxfailedgsmattempts" placeholder="Increase this if GSM signal is weak in your area. The default is 3." value="%maxfailedgsmattempts%" maxlength="4">
+                            <input type="number" class="form-control" id="maxfailedgsmattempts" name="maxfailedgsmattempts" placeholder="Increase this if GSM signal is weak in your area. The default is 3." value="%maxfailedgsmattempts%" maxlength="2" min="2" max="100">
                         </div>
                     </div>
 
@@ -81,21 +81,21 @@
                     <div class="form-group">
                         <label class="control-label col-sm-2" for="minRequiredAccuracy">Minimum accuracy:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="minRequiredAccuracy" name="minRequiredAccuracy" placeholder="Minimum accuracy in meters" value="%minRequiredAccuracy%" maxlength="2">
+                            <input type="number" class="form-control" id="minRequiredAccuracy" name="minRequiredAccuracy" placeholder="Minimum accuracy in meters" value="%minRequiredAccuracy%" maxlength="2" min="1" max="1000">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="control-label col-sm-2" for="log2sdcardinterval">Location logging interval to SD card:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="log2sdcardinterval" name="log2sdcardinterval" placeholder="Log to SD Card frequency" value="%log2sdcardinterval%" maxlength="4">
+                            <input type="number" class="form-control" id="log2sdcardinterval" name="log2sdcardinterval" placeholder="Log to SD Card frequency" value="%log2sdcardinterval%" maxlength="4" min="1" max="300">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="control-label col-sm-2" for="log2mqttinterval">Location logging interval to Server:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="log2mqttinterval" name="log2mqttinterval" placeholder="Log to server frequency" value="%log2mqttinterval%" maxlength="4">
+                            <input type="number" class="form-control" id="log2mqttinterval" name="log2mqttinterval" placeholder="Log to server frequency" value="%log2mqttinterval%" maxlength="4" min="1" max="3600">
                         </div>
                     </div>
 
