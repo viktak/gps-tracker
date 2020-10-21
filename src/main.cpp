@@ -1688,8 +1688,6 @@ void setup() {
   //  Select mode of operation
   operationMode = appSettings.FailedBootAttempts > MAX_FAILED_BOOT_ATTEMPTS ? OPERATION_MODES::WIFI_SETUP:OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE_PIN));
 
-  if (operationMode == OPERATION_MODES::WIFI_SETUP) ledPanel.write(LED_PANEL_WIFI_MODE, 0); else ledPanel.write(LED_PANEL_WIFI_MODE, 1); 
-
   SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n\n", 
     operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
 
@@ -1699,6 +1697,8 @@ void setup() {
 
   switch (operationMode){
     case OPERATION_MODES::DATA_LOGGING:{
+      ledPanel.write(LED_PANEL_WIFI_MODE, 0);
+      ledPanel.write(LED_PANEL_LOGGER_MODE, 1);
 
       //  GPS
       sGPS.begin(GPS_BAUDRATE, SERIAL_8N1, GPS_RECEIVE_GPIO, GPS_SEND_GPIO);
@@ -1722,6 +1722,8 @@ void setup() {
     }
   
     case OPERATION_MODES::WIFI_SETUP:{
+      ledPanel.write(LED_PANEL_WIFI_MODE, 1);
+      ledPanel.write(LED_PANEL_LOGGER_MODE, 0);
 
       //  Internal file system
 
