@@ -6,6 +6,9 @@
 ////////////////////////////////////////////////////////////////////
 
 #define __debugSettings
+#define UI_LANG "en"
+#define FORMAT_SPIFFS_IF_FAILED true
+#define ARDUINOJSON_USE_LONG_LONG 1
 
 #define MQTT_CUSTOMER "viktak"
 #define MQTT_PROJECT  "spiti"

@@ -1,7 +1,3 @@
-#define UI_LANG "en"
-#define FORMAT_SPIFFS_IF_FAILED true
-#define ARDUINOJSON_USE_LONG_LONG 1
-
 #include <includes.h>
 
 #ifdef DUMP_AT_COMMANDS
