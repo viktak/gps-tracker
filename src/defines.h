@@ -5,7 +5,6 @@
 /// General
 ////////////////////////////////////////////////////////////////////
 
-#define __debugSettings
 #define UI_LANG "en"
 #define FORMAT_SPIFFS_IF_FAILED true
 #define ARDUINOJSON_USE_LONG_LONG 1
@@ -39,7 +38,7 @@
 #define DEFAULT_GPRS_USERNAME                   ""
 #define DEFAULT_GPRS_PASSWORD                   ""
 
-#define DEFAULT_REQUIRED_GPS_ACCURACY           30
+#define DEFAULT_REQUIRED_GPS_ACCURACY           10
 
 #define DEFAULT_ADMIN_USERNAME                  "admin"
 #define DEFAULT_ADMIN_PASSWORD                  "admin"

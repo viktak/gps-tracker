@@ -1,3 +1,5 @@
+#define __debugSettings
+
 #include <includes.h>
 
 #ifdef DUMP_AT_COMMANDS
@@ -1170,40 +1172,43 @@ void ConnectToMQTTBroker(){
 }
 
 void SendLocationDataToServer(){
-  ConnectToMQTTBroker();
+    if ( gps.hdop.value() < (10 * appSettings.requiredGPSAccuracy) ){
+        ConnectToMQTTBroker();
 
-  if (PSclient.connected()){
-    SerialMon.println("Sending data to server...");
+        if (PSclient.connected()){
+            SerialMon.println("Sending data to server...");
 
-    const size_t capacity = JSON_OBJECT_SIZE(200);
-    DynamicJsonDocument doc(capacity);
-    char c[11];
+            const size_t capacity = JSON_OBJECT_SIZE(200);
+            DynamicJsonDocument doc(capacity);
+            char c[11];
 
-    doc["_type"] = "location";
-    doc["acc"] = gps.hdop.value();
-    doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
-    doc["batt"] = modem.getBattPercent();
-    doc["conn"] = "m";
-    snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
-    doc["lat"] = gps.location.lat();
-    snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
-    doc["lon"] = gps.location.lng();
-    doc["t"] = "p";
-    doc["tid"] = "XX";
-    doc["tst"] = GetTimeSinceEpoch();
-    doc["vac"] = 99;
-    doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
+            doc["_type"] = "location";
+            doc["acc"] = gps.hdop.value();
+            doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
+            doc["batt"] = modem.getBattPercent();
+            doc["conn"] = "m";
+            snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
+            doc["lat"] = gps.location.lat();
+            snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
+            doc["lon"] = gps.location.lng();
+            doc["t"] = "p";
+            doc["tid"] = "XX";
+            doc["tst"] = GetTimeSinceEpoch();
+            doc["vac"] = 99;
+            doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
 
-    #ifdef __debugSettings
-    serializeJsonPretty(doc,SerialMon);
-    SerialMon.println();
-    #endif
+            #ifdef __debugSettings
+            serializeJsonPretty(doc,SerialMon);
+            SerialMon.println();
+            #endif
 
-    String myJsonString;
-    serializeJson(doc, myJsonString);
+            String myJsonString;
+            serializeJson(doc, myJsonString);
 
-    PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
-  }
+            PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
+        }
+
+    }
 
 }
 
@@ -1446,11 +1451,16 @@ void setup() {
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 
-  SerialMon.printf("\r\n\n\nBooting ESP node %u...\r\n", GetChipID());
-  SerialMon.println("Hardware ID:      " + (String)HARDWARE_ID);
-  SerialMon.println("Hardware version: " + (String)HARDWARE_VERSION);
-  SerialMon.println("Software ID:      " + (String)FIRMWARE_ID);
-  SerialMon.println("Software version: " + FirmwareVersionString);
+  SerialMon.printf("\r\n\n\nBooting ESP node %u...\r\n\n", GetChipID());
+  SerialMon.println("----------------------------------------------------------------");
+  SerialMon.println("   diy.viktak.com");
+  SerialMon.println("----------------------------------------------------------------");
+  
+  SerialMon.println("-  Hardware ID:      " + (String)HARDWARE_ID);
+  SerialMon.println("-  Hardware version: " + (String)HARDWARE_VERSION);
+  SerialMon.println("-  Software ID:      " + (String)FIRMWARE_ID);
+  SerialMon.println("-  Software version: " + FirmwareVersionString);
+  SerialMon.println("----------------------------------------------------------------");
   SerialMon.println();
 
 
