@@ -141,24 +141,24 @@ String GetRegistrationStatusName(RegStatus rs){
 }
 
 const char* GetResetReasonString(RESET_REASON reason){
-  switch (reason){
-    case 1  : return ("Vbat power on reset");break;
-    case 3  : return ("Software reset digital core");break;
-    case 4  : return ("Legacy watch dog reset digital core");break;
-    case 5  : return ("Deep Sleep reset digital core");break;
-    case 6  : return ("Reset by SLC module, reset digital core");break;
-    case 7  : return ("Timer Group0 Watch dog reset digital core");break;
-    case 8  : return ("Timer Group1 Watch dog reset digital core");break;
-    case 9  : return ("RTC Watch dog Reset digital core");break;
-    case 10 : return ("Instrusion tested to reset CPU");break;
-    case 11 : return ("Time Group reset CPU");break;
-    case 12 : return ("Software reset CPU");break;
-    case 13 : return ("RTC Watch dog Reset CPU");break;
-    case 14 : return ("for APP CPU, reset by PRO CPU");break;
-    case 15 : return ("Reset when the vdd voltage is not stable");break;
-    case 16 : return ("RTC Watch dog reset digital core and rtc module");break;
-    default : return ("NO_MEAN");
-  }
+    switch (reason){
+        case 1  : return ("Vbat power on reset");break;
+        case 3  : return ("Software reset digital core");break;
+        case 4  : return ("Legacy watch dog reset digital core");break;
+        case 5  : return ("Deep Sleep reset digital core");break;
+        case 6  : return ("Reset by SLC module, reset digital core");break;
+        case 7  : return ("Timer Group0 Watch dog reset digital core");break;
+        case 8  : return ("Timer Group1 Watch dog reset digital core");break;
+        case 9  : return ("RTC Watch dog Reset digital core");break;
+        case 10 : return ("Instrusion tested to reset CPU");break;
+        case 11 : return ("Time Group reset CPU");break;
+        case 12 : return ("Software reset CPU");break;
+        case 13 : return ("RTC Watch dog Reset CPU");break;
+        case 14 : return ("for APP CPU, reset by PRO CPU");break;
+        case 15 : return ("Reset when the vdd voltage is not stable");break;
+        case 16 : return ("RTC Watch dog reset digital core and rtc module");break;
+        default : return ("NO_MEAN");
+    }
 }
 
 String TimeIntervalToString(time_t time){
@@ -1172,44 +1172,40 @@ void ConnectToMQTTBroker(){
 }
 
 void SendLocationDataToServer(){
-    if ( gps.hdop.value() < (10 * appSettings.requiredGPSAccuracy) ){
-        ConnectToMQTTBroker();
+    ConnectToMQTTBroker();
 
-        if (PSclient.connected()){
-            SerialMon.println("Sending data to server...");
+    if (PSclient.connected()){
+        SerialMon.println("Sending data to server...");
 
-            const size_t capacity = JSON_OBJECT_SIZE(200);
-            DynamicJsonDocument doc(capacity);
-            char c[11];
+        const size_t capacity = JSON_OBJECT_SIZE(200);
+        DynamicJsonDocument doc(capacity);
+        char c[11];
 
-            doc["_type"] = "location";
-            doc["acc"] = gps.hdop.value();
-            doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
-            doc["batt"] = modem.getBattPercent();
-            doc["conn"] = "m";
-            snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
-            doc["lat"] = gps.location.lat();
-            snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
-            doc["lon"] = gps.location.lng();
-            doc["t"] = "p";
-            doc["tid"] = "XX";
-            doc["tst"] = GetTimeSinceEpoch();
-            doc["vac"] = 99;
-            doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
+        doc["_type"] = "location";
+        doc["acc"] = gps.hdop.value();
+        doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
+        doc["batt"] = modem.getBattPercent();
+        doc["conn"] = "m";
+        snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
+        doc["lat"] = gps.location.lat();
+        snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
+        doc["lon"] = gps.location.lng();
+        doc["t"] = "p";
+        doc["tid"] = "XX";
+        doc["tst"] = GetTimeSinceEpoch();
+        doc["vac"] = 99;
+        doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
 
-            #ifdef __debugSettings
-            serializeJsonPretty(doc,SerialMon);
-            SerialMon.println();
-            #endif
+        #ifdef __debugSettings
+        serializeJsonPretty(doc,SerialMon);
+        SerialMon.println();
+        #endif
 
-            String myJsonString;
-            serializeJson(doc, myJsonString);
+        String myJsonString;
+        serializeJson(doc, myJsonString);
 
-            PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
-        }
-
+        PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
     }
-
 }
 
 void SendHeartbeat(){
@@ -1259,6 +1255,9 @@ void SendHeartbeat(){
     sdcDetails["UsedSpace"] = SD.usedBytes();
     sdcDetails["AvailableSpace"] = SD.totalBytes() - SD.usedBytes();
   }
+
+  JsonObject gpsDetails = doc.createNestedObject("GPS");
+  gpsDetails["requiredGPSAccuracy"] = appSettings.requiredGPSAccuracy;
 
   JsonObject modemDetails = doc.createNestedObject("GPRS");
   if (usingPrivateBroker) modemDetails["IMEI"] = modem.getIMEI();
@@ -1566,29 +1565,28 @@ void loop() {
 
     //  Update time if necessary
     if ( needsTime && IsTimeValid() ){
-      SetSystemTimeFromGPS();
-      needsTime=false;
+        SetSystemTimeFromGPS();
+        needsTime = false;
     }
 
-    if ( gps.location.isValid() ){
 
-      if ( millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000 ){
+    if ( gps.location.isValid() && (millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000) &&  (gps.hdop.value() < (100 * appSettings.requiredGPSAccuracy)) ){
         //  Create message to log
         char log[100];
         snprintf(log, sizeof(log), "%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %2u, %3.1f\r\n", 
-          gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.hdop.value(), gps.speed.kmph());
+        gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.hdop.value(), gps.speed.kmph());
 
         SerialMon.print(log);
 
         LogToSDCard(log);
         locationLastLoggedToSDCard = millis();
-      }
+    }
 
-      if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
+    if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
         SendLocationDataToServer();
         locationLastLoggedToMQTT = millis();
-      }
     }
+    
 
     //  Heartbeat
     if ( needsHeartbeat ) SendHeartbeat();
