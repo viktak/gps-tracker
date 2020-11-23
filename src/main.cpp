@@ -1582,7 +1582,7 @@ void loop() {
         locationLastLoggedToSDCard = millis();
     }
 
-    if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
+    if ( gps.location.isValid() && (millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000) &&  (gps.hdop.value() < (100 * appSettings.requiredGPSAccuracy)) ){
         SendLocationDataToServer();
         locationLastLoggedToMQTT = millis();
     }
