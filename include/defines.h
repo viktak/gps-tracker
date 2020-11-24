@@ -15,7 +15,6 @@
 #define HARDWARE_ID "vTracker"
 #define HARDWARE_VERSION "1.0"
 #define FIRMWARE_ID "GPS tracker"
-#define FIRMWARE_VERSION "1.0"
 
 #define DST_TIMEZONE_OFFSET 3    // Day Light Saving Time offset
 #define ST_TIMEZONE_OFFSET  2    // Standard Time offset

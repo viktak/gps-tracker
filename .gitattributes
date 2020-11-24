@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+.pioenvs
+.clang_complete
+.gcc-flags.json
+.piolibdeps
+.pio/**
+.vscode/**
+buildserialnumber
