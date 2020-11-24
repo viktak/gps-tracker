@@ -1,6 +1,7 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
+#include "version.h"
 #include "defines.h"
 #include "enums.h"
 

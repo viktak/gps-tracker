@@ -16,50 +16,50 @@
                 </div>
                 <div class="collapse navbar-collapse" id="myNavbar">
                     <ul class="nav navbar-nav">
-                        <li><a href="/status.html">Status</a></li>
-                        <li class="active"><a href="/generalsettings.html">General</a></li>
-                        <li><a href="/networksettings.html">Network</a></li>
-                        <li><a href="/tools.html">Tools</a></li>
-                        <li><a href="/login.html?DISCONNECT=YES">Logout</a></li>
+                        <li><a href="/status.html">Állapot</a></li>
+                        <li class="active"><a href="/generalsettings.html">Beállítások</a></li>
+                        <li><a href="/networksettings.html">Hálózat</a></li>
+                        <li><a href="/tools.html">Eszközök</a></li>
+                        <li><a href="/login.html?DISCONNECT=YES">Kijelentkezés</a></li>
                     </ul>
                 </div>
             </div>
         </nav>
         <form class="form-horizontal" method="post">
             <div class="well">
-                You can set system parameters here.
+                Itt lehet a készülék beállításait módosítani.
             </div>
 
             <div class="panel panel-default">
-                <div class="panel-heading">System</div>
+                <div class="panel-heading">Rendszer</div>
                 <div class="panel-body">
                     <div class="well well-sm">
-                        Fine tune system settings here.
+                        Rendszerbeállítások finomhangolása
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="friendlyname">Friendly name of node:</label>
+                        <label class="control-label col-sm-2" for="friendlyname">A node barátságos neve:</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="friendlyname" name="friendlyname" placeholder="Enter a friendly name for the node" value="%friendlyname%" maxlength="30">
+                            <input type="text" class="form-control" id="friendlyname" name="friendlyname" placeholder="írjon be egy könnyen megjegyezhető nevet" value="%friendlyname%" maxlength="30">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="heartbeatinterval">Send heartbeat:</label>
+                        <label class="control-label col-sm-2" for="heartbeatinterval">Életjel:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="heartbeatinterval" name="heartbeatinterval" placeholder="Heartbeat frequency" value="%heartbeatinterval%" maxlength="4" min="30" max="900">
+                            <input type="number" class="form-control" id="heartbeatinterval" name="heartbeatinterval" placeholder="Heartbeat frequency" value="%heartbeatinterval%" maxlength="4">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="maxfailedgsmattempts">Max. failed GSM connection attempts before resetting modem:</label>
+                        <label class="control-label col-sm-2" for="maxfailedgsmattempts">Sikertelen GSM-kapcsolatok maximális száma a modum újraindítása előtt:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="maxfailedgsmattempts" name="maxfailedgsmattempts" placeholder="Increase this if GSM signal is weak in your area. The default is 3." value="%maxfailedgsmattempts%" maxlength="2" min="2" max="100">
+                            <input type="number" class="form-control" id="maxfailedgsmattempts" name="maxfailedgsmattempts" placeholder="Ha a környéken rossz a GSM-lefedettség, növelje meg ezt a számot. Az alapértelmezett 3." value="%maxfailedgsmattempts%" maxlength="4">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="timezoneselector">Time zone:</label>
+                        <label class="control-label col-sm-2" for="timezoneselector">Időzóna:</label>
                         <div class="col-sm-10">
                           <select class="form-control" name="timezoneselector" id="timezoneselector">
                             %timezoneslist%
@@ -72,30 +72,30 @@
             </div>
 
             <div class="panel panel-default">
-                <div class="panel-heading">GPS/Tracking</div>
+                <div class="panel-heading">GPS/követés</div>
                 <div class="panel-body">
                     <div class="well well-sm">
-                        Adjust tracking settings here.
+                        Követéssel kapcsolatos beállítások
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="minRequiredAccuracy">Minimum accuracy:</label>
+                        <label class="control-label col-sm-2" for="minRequiredAccuracy">Minimális kötelező pontosság:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="minRequiredAccuracy" name="minRequiredAccuracy" placeholder="Minimum accuracy in meters" value="%minRequiredAccuracy%" maxlength="2" min="1" max="1000">
+                            <input type="number" class="form-control" id="minRequiredAccuracy" name="minRequiredAccuracy" placeholder="Pontosság méterben" value="%minRequiredAccuracy%" maxlength="2">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="log2sdcardinterval">Location logging interval to SD card:</label>
+                        <label class="control-label col-sm-2" for="log2sdcardinterval">Hely tárolása az SD-kártyán ennyi másodpercenként:</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="log2sdcardinterval" name="log2sdcardinterval" placeholder="Log to SD Card frequency" value="%log2sdcardinterval%" maxlength="4" min="1" max="300">
+                            <input type="number" class="form-control" id="log2sdcardinterval" name="log2sdcardinterval" placeholder="Log to SD Card frequency" value="%log2sdcardinterval%" maxlength="4">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="log2mqttinterval">Location logging interval to Server:</label>
+                        <label class="control-label col-sm-2" for="log2mqttinterval">Hely küldése a kiszolgálóra ennyi másodpercenként::</label>
                         <div class="col-sm-10">
-                            <input type="number" class="form-control" id="log2mqttinterval" name="log2mqttinterval" placeholder="Log to server frequency" value="%log2mqttinterval%" maxlength="4" min="1" max="3600">
+                            <input type="number" class="form-control" id="log2mqttinterval" name="log2mqttinterval" placeholder="Log to server frequency" value="%log2mqttinterval%" maxlength="4">
                         </div>
                     </div>
 
@@ -104,37 +104,37 @@
             </div>
 
             <div class="panel panel-default">
-                <div class="panel-heading">GSM communications</div>
+                <div class="panel-heading">GSM-kommunikáció</div>
                 <div class="panel-body">
                     <div class="well well-sm">
-                        These settings manage your GSM connection.
+                        GSM-kapcsolat kezelése
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="gprsapname">GPRS Access Point name:</label>
+                        <label class="control-label col-sm-2" for="gprsapname">GPRS hozzáférési pont neve:</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="gprsapname" name="gprsapname" placeholder="Enter the name of the GPRS Access Point" value="%gprsapname%" maxlength="32">
+                            <input type="text" class="form-control" id="gprsapname" name="gprsapname" placeholder="Írja be a GPRS hozzáférési pont nevét" value="%gprsapname%" maxlength="32">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="gprsusername">GPRS user name:</label>
+                        <label class="control-label col-sm-2" for="gprsusername">GPRS felhasználónév:</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="gprsusername" name="gprsusername" placeholder="User name, if any" value="%gprsusername%" maxlength="32">
+                            <input type="text" class="form-control" id="gprsusername" name="gprsusername" placeholder="Felhasználónév, ha van" value="%gprsusername%" maxlength="32">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="gprspassword">GPRS password:</label>
+                        <label class="control-label col-sm-2" for="gprspassword">GPRS jelszó:</label>
                         <div class="col-sm-10">
-                            <input type="password" class="form-control" id="gprspassword" name="gprspassword" placeholder="Password, if any" value="%gprspassword%" maxlength="32">
+                            <input type="password" class="form-control" id="gprspassword" name="gprspassword" placeholder="Jelszó, ha van" value="%gprspassword%" maxlength="32">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-2" for="simcardpin">SIM card PIN:</label>
+                        <label class="control-label col-sm-2" for="simcardpin">SIM-kártya PIN-kódja:</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="simcardpin" name="simcardpin" placeholder="SIM card pin" value="%simpin%" maxlength="16">
+                            <input type="text" class="form-control" id="simcardpin" name="simcardpin" placeholder="SIM-kártya PIN-kódja" value="%simpin%" maxlength="16">
                         </div>
                     </div>
 
@@ -143,7 +143,7 @@
             </div>
 
             <div class="panel panel-default">
-                <div class="panel-heading">MQTT broker</div>
+                <div class="panel-heading">MQTT kiszolgáló</div>
                 <div class="panel-body">
                     <div class="well well-sm">
                         As a test (or backup) server you can use <code>test.mosquitto.org:1883</code>.

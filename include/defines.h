@@ -5,15 +5,16 @@
 /// General
 ////////////////////////////////////////////////////////////////////
 
-#define __debugSettings
+#define UI_LANG "en"
+#define FORMAT_SPIFFS_IF_FAILED true
+#define ARDUINOJSON_USE_LONG_LONG 1
 
 #define MQTT_CUSTOMER "viktak"
 #define MQTT_PROJECT  "spiti"
 
-#define HARDWARE_ID "ESP32-WROOM-32 BB"
+#define HARDWARE_ID "vTracker"
 #define HARDWARE_VERSION "1.0"
 #define FIRMWARE_ID "GPS tracker"
-#define FIRMWARE_VERSION "1.0"
 
 #define DST_TIMEZONE_OFFSET 3    // Day Light Saving Time offset
 #define ST_TIMEZONE_OFFSET  2    // Standard Time offset
@@ -36,7 +37,7 @@
 #define DEFAULT_GPRS_USERNAME                   ""
 #define DEFAULT_GPRS_PASSWORD                   ""
 
-#define DEFAULT_REQUIRED_GPS_ACCURACY           30
+#define DEFAULT_REQUIRED_GPS_ACCURACY           10
 
 #define DEFAULT_ADMIN_USERNAME                  "admin"
 #define DEFAULT_ADMIN_PASSWORD                  "admin"
@@ -149,13 +150,14 @@
 ////////////////////////////////////////////////////////////////////
 
 #define CONNECTION_STATUS_LED_GPIO  2
-#define LED_PANEL_ADDRESS           0x27
+#define LED_PANEL_ADDRESS           0x38
 
-#define LED_PANEL_SD_CARD_ACCESS    7
-#define LED_PANEL_SD_CARD_ERROR     6
-#define LED_PANEL_GSM_NETWORK       5
+#define LED_PANEL_LOGGER_MODE       0
+#define LED_PANEL_SD_CARD_ACCESS    1
+#define LED_PANEL_SD_CARD_ERROR     2
+#define LED_PANEL_GSM_NETWORK       3
 #define LED_PANEL_GPRS              4
-#define LED_PANEL_WIFI_MODE         3
+#define LED_PANEL_WIFI_MODE         5
 
 
 #endif

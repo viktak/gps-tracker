@@ -1,5 +1,4 @@
-#define FORMAT_SPIFFS_IF_FAILED true
-#define ARDUINOJSON_USE_LONG_LONG 1
+#define __debugSettings
 
 #include <includes.h>
 
@@ -20,14 +19,8 @@ Settings appSettings;
 u_char failedGSMAttempts = 0;
 
 
-// Server details
-const char server[] = "vsh.pp.ua";
-const char resource[] = "/TinyGSM/logo.txt";
-const int  port = 80;
-
-
 TinyGsmClient client(modem);
-HttpClient http(client, server, port);
+//HttpClient http(client, server, port);
 
 
 //  Web server
@@ -148,24 +141,24 @@ String GetRegistrationStatusName(RegStatus rs){
 }
 
 const char* GetResetReasonString(RESET_REASON reason){
-  switch (reason){
-    case 1  : return ("Vbat power on reset");break;
-    case 3  : return ("Software reset digital core");break;
-    case 4  : return ("Legacy watch dog reset digital core");break;
-    case 5  : return ("Deep Sleep reset digital core");break;
-    case 6  : return ("Reset by SLC module, reset digital core");break;
-    case 7  : return ("Timer Group0 Watch dog reset digital core");break;
-    case 8  : return ("Timer Group1 Watch dog reset digital core");break;
-    case 9  : return ("RTC Watch dog Reset digital core");break;
-    case 10 : return ("Instrusion tested to reset CPU");break;
-    case 11 : return ("Time Group reset CPU");break;
-    case 12 : return ("Software reset CPU");break;
-    case 13 : return ("RTC Watch dog Reset CPU");break;
-    case 14 : return ("for APP CPU, reset by PRO CPU");break;
-    case 15 : return ("Reset when the vdd voltage is not stable");break;
-    case 16 : return ("RTC Watch dog reset digital core and rtc module");break;
-    default : return ("NO_MEAN");
-  }
+    switch (reason){
+        case 1  : return ("Vbat power on reset");break;
+        case 3  : return ("Software reset digital core");break;
+        case 4  : return ("Legacy watch dog reset digital core");break;
+        case 5  : return ("Deep Sleep reset digital core");break;
+        case 6  : return ("Reset by SLC module, reset digital core");break;
+        case 7  : return ("Timer Group0 Watch dog reset digital core");break;
+        case 8  : return ("Timer Group1 Watch dog reset digital core");break;
+        case 9  : return ("RTC Watch dog Reset digital core");break;
+        case 10 : return ("Instrusion tested to reset CPU");break;
+        case 11 : return ("Time Group reset CPU");break;
+        case 12 : return ("Software reset CPU");break;
+        case 13 : return ("RTC Watch dog Reset CPU");break;
+        case 14 : return ("for APP CPU, reset by PRO CPU");break;
+        case 15 : return ("Reset when the vdd voltage is not stable");break;
+        case 16 : return ("RTC Watch dog reset digital core and rtc module");break;
+        default : return ("NO_MEAN");
+    }
 }
 
 String TimeIntervalToString(time_t time){
@@ -440,151 +433,6 @@ String getHeaderValue(String header, String headerName) {
 }
 
 
-// OTA Logic 
-void execOTA() {
-  Serial.println("Connecting to: " + String(host));
-  // Connect to S3
-  if (client.connect(host.c_str(), port)) {
-    // Connection Succeed.
-    // Fecthing the bin
-    Serial.println("Fetching Bin: " + String(bin));
-
-    // Get the contents of the bin file
-    client.print(String("GET ") + bin + " HTTP/1.1\r\n" +
-                 "Host: " + host + "\r\n" +
-                 "Cache-Control: no-cache\r\n" +
-                 "Connection: close\r\n\r\n");
-
-    // Check what is being sent
-    //    Serial.print(String("GET ") + bin + " HTTP/1.1\r\n" +
-    //                 "Host: " + host + "\r\n" +
-    //                 "Cache-Control: no-cache\r\n" +
-    //                 "Connection: close\r\n\r\n");
-
-    unsigned long timeout = millis();
-    while (client.available() == 0) {
-      if (millis() - timeout > 5000) {
-        Serial.println("Client Timeout !");
-        client.stop();
-        return;
-      }
-    }
-    // Once the response is available,
-    // check stuff
-
-    /*
-       Response Structure
-        HTTP/1.1 200 OK
-        x-amz-id-2: NVKxnU1aIQMmpGKhSwpCBh8y2JPbak18QLIfE+OiUDOos+7UftZKjtCFqrwsGOZRN5Zee0jpTd0=
-        x-amz-request-id: 2D56B47560B764EC
-        Date: Wed, 14 Jun 2017 03:33:59 GMT
-        Last-Modified: Fri, 02 Jun 2017 14:50:11 GMT
-        ETag: "d2afebbaaebc38cd669ce36727152af9"
-        Accept-Ranges: bytes
-        Content-Type: application/octet-stream
-        Content-Length: 357280
-        Server: AmazonS3
-                                   
-        {{BIN FILE CONTENTS}}
-    */
-    while (client.available()) {
-      // read line till /n
-      String line = client.readStringUntil('\n');
-      // remove space, to check if the line is end of headers
-      line.trim();
-
-      // if the the line is empty,
-      // this is end of headers
-      // break the while and feed the
-      // remaining `client` to the
-      // Update.writeStream();
-      if (!line.length()) {
-        //headers ended
-        break; // and get the OTA started
-      }
-
-      // Check if the HTTP Response is 200
-      // else break and Exit Update
-      if (line.startsWith("HTTP/1.1")) {
-        if (line.indexOf("200") < 0) {
-          Serial.println("Got a non 200 status code from server. Exiting OTA Update.");
-          break;
-        }
-      }
-
-      // extract headers here
-      // Start with content length
-      if (line.startsWith("Content-Length: ")) {
-        contentLength = atol((getHeaderValue(line, "Content-Length: ")).c_str());
-        Serial.println("Got " + String(contentLength) + " bytes from server");
-      }
-
-      // Next, the content type
-      if (line.startsWith("Content-Type: ")) {
-        String contentType = getHeaderValue(line, "Content-Type: ");
-        Serial.println("Got " + contentType + " payload.");
-        if (contentType == "application/octet-stream") {
-          isValidContentType = true;
-        }
-      }
-    }
-  } else {
-    // Connect to S3 failed
-    // May be try?
-    // Probably a choppy network?
-    Serial.println("Connection to " + String(host) + " failed. Please check your setup");
-    // retry??
-    // execOTA();
-  }
-
-  // Check what is the contentLength and if content type is `application/octet-stream`
-  Serial.println("contentLength : " + String(contentLength) + ", isValidContentType : " + String(isValidContentType));
-
-  // check contentLength and content type
-  if (contentLength && isValidContentType) {
-    // Check if there is enough to OTA Update
-    bool canBegin = Update.begin(contentLength);
-
-    // If yes, begin
-    if (canBegin) {
-      Serial.println("Begin OTA. This may take 2 - 5 mins to complete. Things might be quite for a while.. Patience!");
-      // No activity would appear on the Serial monitor
-      // So be patient. This may take 2 - 5mins to complete
-      size_t written = Update.writeStream(client);
-
-      if (written == contentLength) {
-        Serial.println("Written : " + String(written) + " successfully");
-      } else {
-        Serial.println("Written only : " + String(written) + "/" + String(contentLength) + ". Retry?" );
-        // retry??
-        // execOTA();
-      }
-
-      if (Update.end()) {
-        Serial.println("OTA done!");
-        if (Update.isFinished()) {
-          Serial.println("Update successfully completed. Rebooting.");
-          ESP.restart();
-        } else {
-          Serial.println("Update not finished? Something went wrong!");
-        }
-      } else {
-        Serial.println("Error Occurred. Error #: " + String(Update.getError()));
-      }
-    } else {
-      // not enough space to begin OTA
-      // Understand the partitions and
-      // space availability
-      Serial.println("Not enough space to begin OTA");
-      client.flush();
-    }
-  } else {
-    Serial.println("There was no content in the response");
-    client.flush();
-  }
-}
-
-
 void ResetWifiModeTimer(){
   wifiModeTimer = timerBegin(0, 80, true);
 }
@@ -661,6 +509,8 @@ void handleRoot() {
   time_t localTime = myTZ.toLocal(now(), &tcr);
 
   f = SPIFFS.open("/index.html", "r");
+
+  SerialMon.println(f.name());
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 
@@ -840,7 +690,6 @@ void handleNetworkSettings() {
 }
 
 void handleTools() {
-  // execOTA();
 
   if (!is_authenticated()){
      String header = "HTTP/1.1 301 OK\r\nLocation: /login.html\r\nCache-Control: no-cache\r\n\r\n";
@@ -1212,6 +1061,9 @@ void PrintModemProperties(){
 }
 
 void HardwareResetGSMModem(){
+  ledPanel.write(LED_PANEL_GSM_NETWORK, HIGH),
+  ledPanel.write(LED_PANEL_GPRS, HIGH),
+
   //  Datasheet describes a value of 0.3-105 ms, so 500 ms should be OK.
   digitalWrite(MODEM_RESET_GPIO, LOW);
   delay(500);
@@ -1286,59 +1138,6 @@ void ConnectToGPRS(){
   }
 }
 
-void DisconnectFromGPRS(){
-  modem.gprsDisconnect();
-  SerialMon.println(F("GPRS disconnected."));
-  ledPanel.write(LED_PANEL_GPRS, HIGH);
-}
-
-void GSMshit(){
-
-  SerialMon.print(F("Performing HTTP GET request... "));
-  int err = http.get(resource);
-  if (err != 0) {
-    SerialMon.println(F("failed to connect"));
-    delay(10000);
-    return;
-  }
-
-  int status = http.responseStatusCode();
-  SerialMon.print(F("Response status code: "));
-  SerialMon.println(status);
-  if (!status) {
-    delay(10000);
-    return;
-  }
-
-  SerialMon.println(F("Response Headers:"));
-  while (http.headerAvailable()) {
-    String headerName = http.readHeaderName();
-    String headerValue = http.readHeaderValue();
-    SerialMon.println("    " + headerName + " : " + headerValue);
-  }
-
-  int length = http.contentLength();
-  if (length >= 0) {
-    SerialMon.print(F("Content length is: "));
-    SerialMon.println(length);
-  }
-  if (http.isResponseChunked()) {
-    SerialMon.println(F("The response is chunked"));
-  }
-
-  String body = http.responseBody();
-  SerialMon.println(F("Response:"));
-  SerialMon.println(body);
-
-  SerialMon.print(F("Body length is: "));
-  SerialMon.println(body.length());
-
-  http.stop();
-  SerialMon.println(F("Server disconnected"));
-
-  DisconnectFromGPRS();  
-}
-
 
 
 
@@ -1373,41 +1172,40 @@ void ConnectToMQTTBroker(){
 }
 
 void SendLocationDataToServer(){
-  ConnectToMQTTBroker();
+    ConnectToMQTTBroker();
 
-  if (PSclient.connected()){
-    SerialMon.println("Sending data to server...");
+    if (PSclient.connected()){
+        SerialMon.println("Sending data to server...");
 
-    const size_t capacity = JSON_OBJECT_SIZE(200);
-    DynamicJsonDocument doc(capacity);
-    char c[11];
+        const size_t capacity = JSON_OBJECT_SIZE(200);
+        DynamicJsonDocument doc(capacity);
+        char c[11];
 
-    doc["_type"] = "location";
-    doc["acc"] = gps.hdop.value();
-    doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
-    doc["batt"] = modem.getBattPercent();
-    doc["conn"] = "m";
-    snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
-    doc["lat"] = gps.location.lat();
-    snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
-    doc["lon"] = gps.location.lng();
-    doc["t"] = "p";
-    doc["tid"] = "XX";
-    doc["tst"] = GetTimeSinceEpoch();
-    doc["vac"] = 99;
-    doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
+        doc["_type"] = "location";
+        doc["acc"] = gps.hdop.value();
+        doc["alt"] = gps.altitude.isValid()?gps.altitude.meters():-1;
+        doc["batt"] = modem.getBattPercent();
+        doc["conn"] = "m";
+        snprintf(c, sizeof(c), "%3.8f", gps.location.lat());
+        doc["lat"] = gps.location.lat();
+        snprintf(c, sizeof(c), "%3.8f", gps.location.lng());
+        doc["lon"] = gps.location.lng();
+        doc["t"] = "p";
+        doc["tid"] = "XX";
+        doc["tst"] = GetTimeSinceEpoch();
+        doc["vac"] = 99;
+        doc["vel"] = gps.speed.isValid()?gps.speed.kmph():-1;
 
-    #ifdef __debugSettings
-    serializeJsonPretty(doc,SerialMon);
-    SerialMon.println();
-    #endif
+        #ifdef __debugSettings
+        serializeJsonPretty(doc,SerialMon);
+        SerialMon.println();
+        #endif
 
-    String myJsonString;
-    serializeJson(doc, myJsonString);
+        String myJsonString;
+        serializeJson(doc, myJsonString);
 
-    PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
-  }
-
+        PSclient.publish(("owntracks/" + String(appSettings.mqttTopic) + "/SIM800").c_str(), myJsonString.c_str(), false);
+    }
 }
 
 void SendHeartbeat(){
@@ -1457,6 +1255,9 @@ void SendHeartbeat(){
     sdcDetails["UsedSpace"] = SD.usedBytes();
     sdcDetails["AvailableSpace"] = SD.totalBytes() - SD.usedBytes();
   }
+
+  JsonObject gpsDetails = doc.createNestedObject("GPS");
+  gpsDetails["requiredGPSAccuracy"] = appSettings.requiredGPSAccuracy;
 
   JsonObject modemDetails = doc.createNestedObject("GPRS");
   if (usingPrivateBroker) modemDetails["IMEI"] = modem.getIMEI();
@@ -1649,11 +1450,16 @@ void setup() {
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);
 
-  SerialMon.printf("\r\n\n\nBooting ESP node %u...\r\n", GetChipID());
-  SerialMon.println("Hardware ID:      " + (String)HARDWARE_ID);
-  SerialMon.println("Hardware version: " + (String)HARDWARE_VERSION);
-  SerialMon.println("Software ID:      " + (String)FIRMWARE_ID);
-  SerialMon.println("Software version: " + FirmwareVersionString);
+  SerialMon.printf("\r\n\n\nBooting ESP node %u...\r\n\n", GetChipID());
+  SerialMon.println("----------------------------------------------------------------");
+  SerialMon.println("   diy.viktak.com");
+  SerialMon.println("----------------------------------------------------------------");
+  
+  SerialMon.println("-  Hardware ID:      " + (String)HARDWARE_ID);
+  SerialMon.println("-  Hardware version: " + (String)HARDWARE_VERSION);
+  SerialMon.println("-  Software ID:      " + (String)FIRMWARE_ID);
+  SerialMon.println("-  Software version: " + FirmwareVersionString);
+  SerialMon.println("----------------------------------------------------------------");
   SerialMon.println();
 
 
@@ -1685,8 +1491,6 @@ void setup() {
   //  Select mode of operation
   operationMode = appSettings.FailedBootAttempts > MAX_FAILED_BOOT_ATTEMPTS ? OPERATION_MODES::WIFI_SETUP:OPERATION_MODES(!digitalRead(BUTTON_SELECT_MODE_PIN));
 
-  if (operationMode == OPERATION_MODES::WIFI_SETUP) ledPanel.write(LED_PANEL_WIFI_MODE, 0); else ledPanel.write(LED_PANEL_WIFI_MODE, 1); 
-
   SerialMon.printf("\r\n====================================\r\nMode of operation: %s\r\n====================================\r\n\n", 
     operationMode==OPERATION_MODES::DATA_LOGGING?GetOperationalMode(OPERATION_MODES::DATA_LOGGING):GetOperationalMode(OPERATION_MODES::WIFI_SETUP));
 
@@ -1696,6 +1500,8 @@ void setup() {
 
   switch (operationMode){
     case OPERATION_MODES::DATA_LOGGING:{
+      ledPanel.write(LED_PANEL_WIFI_MODE, HIGH);
+      ledPanel.write(LED_PANEL_LOGGER_MODE, LOW);
 
       //  GPS
       sGPS.begin(GPS_BAUDRATE, SERIAL_8N1, GPS_RECEIVE_GPIO, GPS_SEND_GPIO);
@@ -1719,6 +1525,8 @@ void setup() {
     }
   
     case OPERATION_MODES::WIFI_SETUP:{
+      ledPanel.write(LED_PANEL_WIFI_MODE, LOW);
+      ledPanel.write(LED_PANEL_LOGGER_MODE, HIGH);
 
       //  Internal file system
 
@@ -1757,31 +1565,28 @@ void loop() {
 
     //  Update time if necessary
     if ( needsTime && IsTimeValid() ){
-      SetSystemTimeFromGPS();
-      needsTime=false;
+        SetSystemTimeFromGPS();
+        needsTime = false;
     }
 
-    if ( gps.location.isValid() ){
 
-      if ( millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000 ){
+    if ( gps.location.isValid() && (millis() - locationLastLoggedToSDCard > appSettings.logToSDCardInterval * 1000) &&  (gps.hdop.value() < (100 * appSettings.requiredGPSAccuracy)) ){
         //  Create message to log
         char log[100];
         snprintf(log, sizeof(log), "%02u-%02u-%02u %02u:%02u:%02u, %u, %3.8f %3.8f, %2u, %3.1f\r\n", 
-          gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.hdop.value(), gps.speed.kmph());
+        gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.satellites.value(), gps.location.lat(), gps.location.lng(), gps.hdop.value(), gps.speed.kmph());
 
         SerialMon.print(log);
 
         LogToSDCard(log);
         locationLastLoggedToSDCard = millis();
-      }
-
-      if ( millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000 ){
-        if ( gps.location.isValid() ){
-          SendLocationDataToServer();
-          locationLastLoggedToMQTT = millis();
-        }
-      }
     }
+
+    if ( gps.location.isValid() && (millis() - locationLastLoggedToMQTT > appSettings.logToMQTTServerInterval * 1000) &&  (gps.hdop.value() < (100 * appSettings.requiredGPSAccuracy)) ){
+        SendLocationDataToServer();
+        locationLastLoggedToMQTT = millis();
+    }
+    
 
     //  Heartbeat
     if ( needsHeartbeat ) SendHeartbeat();

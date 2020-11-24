@@ -1,0 +1,371 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+%pageheader%
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">ActoSenso Node</a>
+                </div>
+                <div class="collapse navbar-collapse" id="myNavbar">
+                    <ul class="nav navbar-nav">
+                        <li class="active"><a href="/status.html">Állapot</a></li>
+                        <li><a href="/generalsettings.html">Beállítások</a></li>
+                        <li><a href="/networksettings.html">Hálózat</a></li>
+                        <li><a href="/tools.html">Eszközök</a></li>
+                        <li><a href="/login.html?DISCONNECT=YES">Kijelentkezés</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="jumbotron">
+            <h1>vTracker</h1>
+            <h3>Konfigurációs konzol</h3>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h2>Node: %espid%</h2>
+            </div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <tbody>
+                        <tr>
+                            <td width="40%">
+                                Hardverazonosító:
+                            </td>
+                            <td width="60%">
+                                %hardwareid%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Hardververzió:</td>
+                            <td>%hardwareversion%</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Szoftverazonosító:
+                            </td>
+                            <td>
+                                %softwareid%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Szoftververzió:
+                            </td>
+                            <td>
+                                %firmwareversion%
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Rendszer</div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                Név
+                            </th>
+                            <th>
+                                Érték
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="40%">
+                                ESP csip azonosítója
+                            </td>
+                            <td width="60%">
+                                %chipid%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Barátságos név
+                            </td>
+                            <td>
+                                %friendlyname%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Jelenlegi idő</td>
+                            <td>%currenttime%</td>
+                        </tr>
+                        <tr>
+                            <td>Üzemelési idő </td>
+                            <td>%uptime%</td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                Legutolsó újraindítás oka (CPU0)
+                            </td>
+                            <td>
+                                %lastresetreason0%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Legutolsó újraindítás oka (CPU1)
+                            </td>
+                            <td>
+                                %lastresetreason1%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Flash memória mérete
+                            </td>
+                            <td>
+                                %flashchipsize% bytes
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Flash memória sebessége</td>
+                            <td>%flashchipspeed% Hz</td>
+                        </tr>
+                        <tr>
+                            <td>szabad heap</td>
+                            <td>%freeheapsize% bytes</td>
+                        </tr>
+                        <tr>
+                            <td>szabad programmemória</td>
+                            <td>%freesketchspace% bytes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Wifi</div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                Név
+                            </th>
+                            <th>
+                                Érték
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="40%">
+                                Hálózati mód
+                            </td>
+                            <td width="60%">
+                                %wifimode%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                MAC-cím
+                            </td>
+                            <td>
+                                %macaddress%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>SSID (hálózat neve)</td>
+                            <td>%ssid%</td>
+                        </tr>
+                        <tr>
+                            <td>Hálózati cím</td>
+                            <td>%networkaddress%</td>
+                        </tr>
+                        <tr>
+                            <td>Alhálózati maszk</td>
+                            <td>%subnetmask%</td>
+                        </tr>
+                        <tr>
+                            <td>Átjáró</td>
+                            <td>%gateway%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Modem</div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                Név
+                            </th>
+                            <th>
+                                Érték
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="40%">
+                                Modem neve
+                            </td>
+                            <td width="60%">
+                                %modemname%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Információk a modemről
+                            </td>
+                            <td>
+                                %modeminfo%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                IMEI
+                            </td>
+                            <td>
+                                %imei%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                IMSI
+                            </td>
+                            <td>
+                                %imsi%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                CCID
+                            </td>
+                            <td>
+                                %ccid%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                SIM-kártya állapota
+                            </td>
+                            <td>
+                                %simstatus%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                SIM-kártya PIN-je
+                            </td>
+                            <td>
+                                %simpin%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Akkumulátor
+                            </td>
+                            <td>
+                                %batteryvoltage%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Akkumulátor
+                            </td>
+                            <td>
+                                %batterypercentage%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Regisztráció állapota
+                            </td>
+                            <td>
+                                %registrationstatus%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Operátor
+                            </td>
+                            <td>
+                                %operator%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Jel erőssége
+                            </td>
+                            <td>
+                                %signalquality%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Hálózat
+                            </td>
+                            <td>
+                                %isnetworkconnected%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                GPRS
+                            </td>
+                            <td>
+                                %isgprsconnected%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                GPRS AP neve
+                            </td>
+                            <td>
+                                %gprsapname%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                GPRS felhasználóneve
+                            </td>
+                            <td>
+                                %gprsusername%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                IP-cím
+                            </td>
+                            <td>
+                                %gsmipaddress%
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="well well-sm">
+            (c)2016-2020 Viktor Takács - <a href="http://diy.viktak.com" target="_blank">diy.viktak.com</a>
+        </div>
+
+    </div>
+</body>
+</html>
