@@ -5,3 +5,4 @@
 .pio/**
 .vscode/**
 buildserialnumber
+doc/**

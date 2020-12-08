@@ -32,7 +32,7 @@
 /// Deafult values
 ////////////////////////////////////////////////////////////////////
 
-#define DEFAULT_GSM_PIN                         "1747"
+#define DEFAULT_GSM_PIN                         "1234"
 #define DEFAULT_GPRS_APN_NAME                   "internet"
 #define DEFAULT_GPRS_USERNAME                   ""
 #define DEFAULT_GPRS_PASSWORD                   ""
