@@ -48,17 +48,6 @@ PCF857x ledPanel(LED_PANEL_ADDRESS, &Wire);
 //  SD card
 File myGPSLogFile;
 
-
-//  Time
-// Daylight savings time rules for Greece
-TimeChangeRule myDST = {"MDT", Fourth, Sun, Mar, 2, DST_TIMEZONE_OFFSET * 60};
-TimeChangeRule mySTD = {"MST", Fourth,  Sun, Oct, 2,  ST_TIMEZONE_OFFSET * 60};
-Timezone myTZ(myDST, mySTD);
-TimeChangeRule *tcr;        // Pointer to the time change rule
-bool needsTime = true;
-bool needsHeartbeat = false;
-
-
 //  Timers
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -73,6 +62,9 @@ OPERATION_MODES operationMode = OPERATION_MODES::DATA_LOGGING;
 enum CONNECTION_STATE connectionState;
 bool ntpInitialized = false;
 bool needsRestart = false;
+TimeChangeRule *tcr;        // Pointer to the time change rule
+bool needsTime = true;
+bool needsHeartbeat = false;
 
 
 //////////////////////////////////////////////////////////////////
@@ -207,7 +199,7 @@ const char*  GetOperationalMode(OPERATION_MODES mode){
 
 //  !!! For "strftime" to work delete Time.h file in TimeLib library  !!!
 char* GetFullDateTime(const char *formattingString, size_t size){
-    time_t localTime = myTZ.toLocal(now(), &tcr);
+  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
     struct tm * now = localtime( &localTime );
     char* buf = new char[20];
     strftime (buf, 20, formattingString, now);
@@ -474,7 +466,7 @@ void handleLogin(){
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = myTZ.toLocal(now(), &tcr);
+  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/login.html", "r");
 
@@ -506,7 +498,7 @@ void handleRoot() {
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = myTZ.toLocal(now(), &tcr);
+  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/index.html", "r");
 
@@ -553,7 +545,7 @@ void handleStatus() {
   strcpy(appSettings.AccessPointSSID, c);
 
 
-  time_t localTime = myTZ.toLocal(now(), &tcr);
+  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   String s;
 
@@ -663,7 +655,7 @@ void handleNetworkSettings() {
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = myTZ.toLocal(now(), &tcr);
+  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/networksettings.html", "r");
   String s, htmlString, wifiList;
@@ -829,7 +821,7 @@ void handleGeneralSettings() {
 
   char ss[4];
 
-  for (signed char i = -12; i < 15; i++) {
+  for (signed char i = 0; i < sizeof(tzDescriptions)/sizeof(tzDescriptions[0]); i++) {
     itoa(i, ss, DEC);
     timezoneslist+="<option ";
     if (appSettings.timeZone == i){
@@ -837,14 +829,10 @@ void handleGeneralSettings() {
     }
     timezoneslist+= "value=\"";
     timezoneslist+=ss;
-    timezoneslist+="\">UTC ";
-    if (i>0){
-      timezoneslist+="+";
-    }
-    if (i!=0){
-      timezoneslist+=ss;
-      timezoneslist+=":00";
-    }
+    timezoneslist+="\">";
+
+    timezoneslist+= tzDescriptions[i];
+
     timezoneslist+="</option>";
     timezoneslist+="\n";
   }

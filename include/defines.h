@@ -150,7 +150,7 @@
 ////////////////////////////////////////////////////////////////////
 
 #define CONNECTION_STATUS_LED_GPIO  2
-#define LED_PANEL_ADDRESS           0x38
+#define LED_PANEL_ADDRESS           0x20
 
 #define LED_PANEL_LOGGER_MODE       0
 #define LED_PANEL_SD_CARD_ACCESS    1
