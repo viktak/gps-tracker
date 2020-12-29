@@ -150,7 +150,11 @@
 ////////////////////////////////////////////////////////////////////
 
 #define CONNECTION_STATUS_LED_GPIO  2
-#define LED_PANEL_ADDRESS           0x20
+
+
+//  Some PCF8574 chips' base address is 0x20, some 0x38...
+//  Best thing is to check at startup in debug mode.
+#define LED_PANEL_ADDRESS           0x38
 
 #define LED_PANEL_LOGGER_MODE       0
 #define LED_PANEL_SD_CARD_ACCESS    1
