@@ -221,7 +221,6 @@ time_t GetTimeSinceEpoch(){
     t.tm_min = minute(now());
     t.tm_sec = second(now());
     return mktime(&t);
-
 }
 
 void PrintSettings(){
