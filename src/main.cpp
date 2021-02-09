@@ -1432,7 +1432,7 @@ void InitI2C(){
 
 void setup() {
   // Set console baud rate
-  SerialMon.begin(SERIAL_SPEED);
+  SerialMon.begin(DEBUG_SPEED);
   delay(1000);
 
   String FirmwareVersionString = String(FIRMWARE_VERSION) + " @ " + String(__TIME__) + " - " + String(__DATE__);

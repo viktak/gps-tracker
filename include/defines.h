@@ -19,8 +19,6 @@
 #define DST_TIMEZONE_OFFSET 3    // Day Light Saving Time offset
 #define ST_TIMEZONE_OFFSET  2    // Standard Time offset
 
-#define SERIAL_SPEED 921600
-
 #define ESP_ACCESS_POINT_NAME_SIZE  63
 #define WIFI_CONNECTION_TIMEOUT 10
 #define OTA_BLINKING_RATE 3
@@ -126,7 +124,7 @@
 #define SerialGPS Serial2
 #define TINY_GSM_DEBUG SerialMon
 
-#define DEBUG_BAUDRATE 115200
+#define DEBUG_SPEED 921600
 
 
 
