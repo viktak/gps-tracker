@@ -19,6 +19,8 @@
 #define DST_TIMEZONE_OFFSET 3    // Day Light Saving Time offset
 #define ST_TIMEZONE_OFFSET  2    // Standard Time offset
 
+#define SERIAL_SPEED 921600
+
 #define ESP_ACCESS_POINT_NAME_SIZE  63
 #define WIFI_CONNECTION_TIMEOUT 10
 #define OTA_BLINKING_RATE 3
@@ -152,9 +154,9 @@
 #define CONNECTION_STATUS_LED_GPIO  2
 
 
-//  Some PCF8574 chips' base address is 0x20, some 0x38...
+//  Some PCF8574 chips' base address is 0x20, some 0x38... Depending on the manufacturer(?)
 //  Best thing is to check at startup in debug mode.
-#define LED_PANEL_ADDRESS           0x38
+#define LED_PANEL_ADDRESS           0x20
 
 #define LED_PANEL_LOGGER_MODE       0
 #define LED_PANEL_SD_CARD_ACCESS    1
