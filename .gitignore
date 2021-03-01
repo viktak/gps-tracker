@@ -4,5 +4,6 @@
 .piolibdeps
 .pio/**
 .vscode/**
-buildserialnumber
 doc/**
+buildserialnumber
+include/version.h
