@@ -10,7 +10,7 @@
 #define ARDUINOJSON_USE_LONG_LONG 1
 
 #define MQTT_CUSTOMER "viktak"
-#define MQTT_PROJECT  "spiti"
+#define MQTT_PROJECT  "fleet"
 
 #define HARDWARE_ID "vTracker"
 #define HARDWARE_VERSION "1.0"
@@ -154,7 +154,7 @@
 
 //  Some PCF8574 chips' base address is 0x20, some 0x38... Depending on the manufacturer(?)
 //  Best thing is to check at startup in debug mode.
-#define LED_PANEL_ADDRESS           0x20
+#define LED_PANEL_ADDRESS           0x38
 
 #define LED_PANEL_LOGGER_MODE       0
 #define LED_PANEL_SD_CARD_ACCESS    1

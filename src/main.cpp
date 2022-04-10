@@ -66,7 +66,6 @@ TimeChangeRule *tcr;        // Pointer to the time change rule
 bool needsTime = true;
 bool needsHeartbeat = false;
 
-
 //////////////////////////////////////////////////////////////////
 /////   Web server
 //////////////////////////////////////////////////////////////////
@@ -199,7 +198,7 @@ const char*  GetOperationalMode(OPERATION_MODES mode){
 
 //  !!! For "strftime" to work delete Time.h file in TimeLib library  !!!
 char* GetFullDateTime(const char *formattingString, size_t size){
-  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
+  time_t localTime = timechangerules::timezones[appSettings.timeZone]->toLocal(now(), &tcr);
     struct tm * now = localtime( &localTime );
     char* buf = new char[20];
     strftime (buf, 20, formattingString, now);
@@ -465,7 +464,7 @@ void handleLogin(){
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
+  time_t localTime = timechangerules::timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/login.html", "r");
 
@@ -497,7 +496,7 @@ void handleRoot() {
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
+  time_t localTime = timechangerules::timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/index.html", "r");
 
@@ -544,7 +543,7 @@ void handleStatus() {
   strcpy(appSettings.AccessPointSSID, c);
 
 
-  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
+  time_t localTime = timechangerules::timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   String s;
 
@@ -654,7 +653,7 @@ void handleNetworkSettings() {
   if (f.available()) headerString = f.readString();
   f.close();
 
-  time_t localTime = timezones[appSettings.timeZone]->toLocal(now(), &tcr);
+  time_t localTime = timechangerules::timezones[appSettings.timeZone]->toLocal(now(), &tcr);
 
   f = SPIFFS.open("/networksettings.html", "r");
   String s, htmlString, wifiList;
@@ -820,7 +819,7 @@ void handleGeneralSettings() {
 
   char ss[4];
 
-  for (signed char i = 0; i < sizeof(tzDescriptions)/sizeof(tzDescriptions[0]); i++) {
+  for (signed char i = 0; i < sizeof(timechangerules::tzDescriptions)/sizeof(timechangerules::tzDescriptions[0]); i++) {
     itoa(i, ss, DEC);
     timezoneslist+="<option ";
     if (appSettings.timeZone == i){
@@ -830,7 +829,7 @@ void handleGeneralSettings() {
     timezoneslist+=ss;
     timezoneslist+="\">";
 
-    timezoneslist+= tzDescriptions[i];
+    timezoneslist+= timechangerules::tzDescriptions[i];
 
     timezoneslist+="</option>";
     timezoneslist+="\n";
